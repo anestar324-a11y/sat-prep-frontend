@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-
+import { LoginPage, RegisterPage } from "./AuthPages";
 /* ─── colour tokens ─── */
 const T = {
   bg: "#F7F8FA",
@@ -1006,11 +1006,83 @@ export default function App() {
   const [page, setPage] = useState("home");
   const [animating, setAnimating] = useState(false);
 
+  // ─── AUTH STATE ───
+  const [user, setUser] = useState(null);
+  const [authPage, setAuthPage] = useState("login"); // "login" эсвэл "register"
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Хуудас ачаалахад token шалгах
+  useEffect(() => {
+    const token = localStorage.getItem("sat_token");
+    const savedUser = localStorage.getItem("sat_user");
+    if (token && savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        localStorage.removeItem("sat_token");
+        localStorage.removeItem("sat_user");
+      }
+    }
+    setAuthChecked(true);
+  }, []);
+
+  // Нэвтрэх
+  const handleLogin = (userData) => {
+    setUser(userData);
+  };
+
+  // Бүртгүүлэх
+  const handleRegister = (userData) => {
+    setUser(userData);
+  };
+
+  // Гарах
+  const handleLogout = () => {
+    localStorage.removeItem("sat_token");
+    localStorage.removeItem("sat_user");
+    setUser(null);
+    setAuthPage("login");
+  };
+
   const navigate = (p) => {
     setAnimating(true);
     setTimeout(() => { setPage(p); setAnimating(false); }, 200);
   };
 
+  // Auth шалгаж дуусаагүй бол хүлээх
+  if (!authChecked) {
+    return (
+      <div style={{
+        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "#F7F8FA", fontFamily: "'DM Sans', sans-serif",
+      }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 16, background: "#3B6BF5",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "#fff", fontWeight: 800, fontSize: 22, margin: "0 auto 16px",
+          }}>S</div>
+          <div style={{ color: "#6B7280", fontSize: 14 }}>Ачааллаж байна...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Нэвтрээгүй бол Login/Register хуудас харуулах
+  if (!user) {
+    return (
+      <>
+        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+        {authPage === "login" ? (
+          <LoginPage onLogin={handleLogin} onSwitch={() => setAuthPage("register")} />
+        ) : (
+          <RegisterPage onRegister={handleRegister} onSwitch={() => setAuthPage("login")} />
+        )}
+      </>
+    );
+  }
+
+  // ─── Нэвтэрсэн хэрэглэгчийн хуудас (хуучин кодтой ижил) ───
   const navItems = [
     { id: "home", label: "Нүүр хуудас", icon: "home" },
     { id: "lessons", label: "Хичээлүүд", icon: "book" },
@@ -1076,7 +1148,7 @@ export default function App() {
             <div style={{ display: "flex", alignItems: "center", gap: 8, color: T.textSec, fontSize: 14, cursor: "pointer" }}>
               <Icon name="settings" size={16} color={T.textSec} /> Тусламж
             </div>
-            <div onClick={() => {}} style={{ display: "flex", alignItems: "center", gap: 8, color: T.textSec, fontSize: 14, cursor: "pointer" }}>
+            <div onClick={handleLogout} style={{ display: "flex", alignItems: "center", gap: 8, color: T.textSec, fontSize: 14, cursor: "pointer" }}>
               <Icon name="logout" size={16} color={T.textSec} /> Гарах
             </div>
           </div>
