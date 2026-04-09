@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { LoginPage, RegisterPage } from "./AuthPages";
+import AdminPanel from "./AdminPanel";
 /* ─── colour tokens ─── */
 const T = {
   bg: "#F7F8FA",
@@ -1091,6 +1092,7 @@ export default function App() {
     { id: "flashcards", label: "Flashcards", icon: "flash" },
     { id: "news", label: "Мэдээ", icon: "news" },
     { id: "profile", label: "Миний бүртгэл", icon: "user" },
+    { id: "admin", label: "Admin Panel", icon: "settings" },
   ];
 
   const renderPage = () => {
@@ -1102,6 +1104,7 @@ export default function App() {
       case "flashcards": return <FlashcardsPage />;
       case "news": return <NewsPage />;
       case "profile": return <ProfilePage />;
+      case "admin": return <AdminPanel />;
       default: return <HomePage />;
     }
   };
