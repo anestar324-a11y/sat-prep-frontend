@@ -1092,7 +1092,7 @@ export default function App() {
     { id: "flashcards", label: "Flashcards", icon: "flash" },
     { id: "news", label: "Мэдээ", icon: "news" },
     { id: "profile", label: "Миний бүртгэл", icon: "user" },
-    { id: "admin", label: "Admin Panel", icon: "settings" },
+    
   ];
 
   const renderPage = () => {
