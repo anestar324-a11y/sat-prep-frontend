@@ -633,110 +633,232 @@ const HomePage = ({ navigate }) => {
   );
 };
 
-/* VIDEOS PAGE */
+/* VIDEOS PAGE — Khan Academy style */
 const VideosPage = () => {
-  const [tab, setTab] = useState("math");
-  const [videos, setVideos] = useState([]);
+  const [allVideos, setAllVideos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSection, setSelectedSection] = useState("math");
+  const [selectedTopic, setSelectedTopic] = useState(null);
   const [selectedVideo, setSelectedVideo] = useState(null);
+  const [watched, setWatched] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("sat_watched") || "{}"); } catch { return {}; }
+  });
 
   const token = localStorage.getItem("sat_token");
 
   useEffect(() => {
-    setLoading(true);
-    fetch(`${API_URL}/videos?section=${tab}&published=true`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API_URL}/videos`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(d => { setVideos(d.videos || []); setLoading(false); })
+      .then(d => { setAllVideos(d.videos || []); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [tab]);
+  }, []);
+
+  const markWatched = (id) => {
+    const updated = { ...watched, [id]: true };
+    setWatched(updated);
+    localStorage.setItem("sat_watched", JSON.stringify(updated));
+  };
+
+  const sectionMeta = {
+    math: { label: "SAT Math", color: T.primary, emoji: "📐" },
+    "reading-writing": { label: "SAT Reading & Writing", color: T.orange, emoji: "📖" },
+    general: { label: "Ерөнхий", color: T.success, emoji: "🎯" },
+  };
 
   const diffLabel = (d) => d === "beginner" ? "Easy" : d === "intermediate" ? "Medium" : "Hard";
 
+  // Group: section → topicName → [videos sorted by order]
+  const grouped = allVideos.reduce((acc, v) => {
+    const sec = v.section || "general";
+    const topic = v.topicName || v.topic || "Ерөнхий";
+    if (!acc[sec]) acc[sec] = {};
+    if (!acc[sec][topic]) acc[sec][topic] = [];
+    acc[sec][topic].push(v);
+    return acc;
+  }, {});
+  Object.values(grouped).forEach(sec =>
+    Object.values(sec).forEach(vids => vids.sort((a, b) => (a.order || 0) - (b.order || 0)))
+  );
+
+  const availableSections = Object.keys(sectionMeta).filter(k => grouped[k]);
+  const topicsInSection = Object.entries(grouped[selectedSection] || {});
+  const activeTopic = selectedTopic && grouped[selectedSection]?.[selectedTopic] ? selectedTopic : topicsInSection[0]?.[0];
+  const videosInTopic = grouped[selectedSection]?.[activeTopic] || [];
+
+  // ── VIDEO PLAYER VIEW ──
   if (selectedVideo) {
+    const idx = videosInTopic.findIndex(v => v._id === selectedVideo._id);
+    const prevV = videosInTopic[idx - 1];
+    const nextV = videosInTopic[idx + 1];
     return (
       <div>
-        <button onClick={() => setSelectedVideo(null)} style={{ ...S.btn("outline"), marginBottom: 24 }}>← Буцах</button>
-        <div style={S.card}>
-          <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", borderRadius: 12, marginBottom: 24 }}>
-            <iframe
-              src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=1`}
-              style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
+        <button onClick={() => setSelectedVideo(null)} style={{ ...S.btn("outline"), marginBottom: 20 }}>← Буцах</button>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24, alignItems: "start" }}>
+          <div>
+            <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", borderRadius: 16, background: "#000", marginBottom: 20 }}>
+              <iframe
+                src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=1`}
+                style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.primary, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>{activeTopic}</div>
+            <h2 style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.3, marginBottom: 10 }}>{selectedVideo.title}</h2>
+            {selectedVideo.description && <p style={{ color: T.textSec, lineHeight: 1.7, marginBottom: 16 }}>{selectedVideo.description}</p>}
+            <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+              {watched[selectedVideo._id] ? (
+                <span style={{ display: "flex", alignItems: "center", gap: 6, color: T.success, fontWeight: 600, fontSize: 14 }}>
+                  <Icon name="check" size={16} color={T.success} /> Үзсэн
+                </span>
+              ) : (
+                <button onClick={() => markWatched(selectedVideo._id)} style={S.btn("accent")}>
+                  <Icon name="check" size={16} color={T.text} /> Үзсэн гэж тэмдэглэх
+                </button>
+              )}
+              {prevV && <button onClick={() => setSelectedVideo(prevV)} style={S.btn("outline")}>← Өмнөх</button>}
+              {nextV && (
+                <button onClick={() => { markWatched(selectedVideo._id); setSelectedVideo(nextV); }} style={S.btn()}>
+                  Дараах хичээл →
+                </button>
+              )}
+            </div>
           </div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>{selectedVideo.title}</h2>
-          {selectedVideo.description && <p style={{ color: T.textSec, fontSize: 15, lineHeight: 1.6, marginBottom: 16 }}>{selectedVideo.description}</p>}
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {selectedVideo.topicName && <span style={S.tag(T.primaryLight, T.primary)}>{selectedVideo.topicName}</span>}
-            {selectedVideo.difficulty && <span style={S.tag(diffBg(diffLabel(selectedVideo.difficulty)), diffColor(diffLabel(selectedVideo.difficulty)))}>{selectedVideo.difficulty}</span>}
-            {selectedVideo.duration && (
-              <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: T.textSec }}>
-                <Icon name="clock" size={14} color={T.textSec} /> {selectedVideo.duration} мин
-              </span>
-            )}
-            {selectedVideo.viewCount > 0 && <span style={{ fontSize: 13, color: T.textSec }}>{selectedVideo.viewCount} үзэлт</span>}
+
+          {/* Sidebar playlist */}
+          <div style={{ ...S.card, padding: 0, overflow: "hidden", position: "sticky", top: 16 }}>
+            <div style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}`, fontSize: 14, fontWeight: 700 }}>
+              {activeTopic} · {videosInTopic.length} хичээл
+            </div>
+            <div style={{ maxHeight: 520, overflowY: "auto" }}>
+              {videosInTopic.map((v, i) => {
+                const isW = watched[v._id];
+                const isCur = v._id === selectedVideo._id;
+                return (
+                  <div key={v._id} onClick={() => setSelectedVideo(v)}
+                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", cursor: "pointer", background: isCur ? T.primaryLight : "transparent", borderBottom: `1px solid ${T.border}`, transition: "background 0.15s" }}
+                    onMouseEnter={e => { if (!isCur) e.currentTarget.style.background = T.bg; }}
+                    onMouseLeave={e => { if (!isCur) e.currentTarget.style.background = "transparent"; }}>
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: isW ? T.success : isCur ? T.primary : T.border, color: isW || isCur ? "#fff" : T.textSec, fontSize: 11, fontWeight: 700 }}>
+                      {isW ? <Icon name="check" size={11} color="#fff" /> : i + 1}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: isCur ? 600 : 400, color: isCur ? T.primary : T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 }}>{v.title}</div>
+                      {v.duration && <div style={{ fontSize: 11, color: T.textSec, marginTop: 2 }}>{v.duration} мин</div>}
+                    </div>
+                    {isCur && <Icon name="play" size={13} color={T.primary} />}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
+  // ── MAIN LAYOUT (sidebar + content) ──
   return (
     <div>
       <div style={S.sectionTitle}>Видео хичээлүүд</div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 28 }}>
-        {[["math", "SAT Math"], ["reading-writing", "SAT Reading & Writing"], ["general", "Ерөнхий"]].map(([k, label]) => (
-          <button key={k} onClick={() => setTab(k)} style={{ ...S.btn(tab === k ? "primary" : "outline"), borderRadius: 24, fontSize: 14 }}>{label}</button>
-        ))}
-      </div>
-
       {loading ? (
         <div style={{ textAlign: "center", padding: "80px 0", color: T.textSec }}>
           <div style={{ width: 36, height: 36, border: `3px solid ${T.border}`, borderTopColor: T.primary, borderRadius: "50%", margin: "0 auto 16px", animation: "spin 0.8s linear infinite" }} />
           Ачааллаж байна...
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
-      ) : videos.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "80px 0" }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>🎬</div>
-          <div style={{ fontSize: 18, fontWeight: 600 }}>Одоогоор видео байхгүй байна</div>
-          <div style={{ fontSize: 14, color: T.textSec, marginTop: 8 }}>Удахгүй шинэ видео хичээлүүд нэмэгдэх болно.</div>
-        </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-          {videos.map(v => (
-            <div key={v._id} onClick={() => setSelectedVideo(v)}
-              style={{ ...S.card, cursor: "pointer", padding: 0, overflow: "hidden", transition: "all 0.2s ease" }}
-              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 12px 32px rgba(59,107,245,0.15)"; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
-              <div style={{ position: "relative" }}>
-                <img
-                  src={v.thumbnail || `https://img.youtube.com/vi/${v.youtubeId}/mqdefault.jpg`}
-                  alt={v.title}
-                  style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }}
-                />
-                <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.92)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Icon name="play" size={20} color={T.primary} />
+        <div style={{ display: "grid", gridTemplateColumns: "270px 1fr", background: T.card, borderRadius: 20, border: `1px solid ${T.border}`, overflow: "hidden", minHeight: 560 }}>
+          {/* Left sidebar */}
+          <div style={{ borderRight: `1px solid ${T.border}`, overflowY: "auto", maxHeight: 700 }}>
+            {availableSections.map(secKey => {
+              const meta = sectionMeta[secKey];
+              return (
+                <div key={secKey}>
+                  <div style={{ padding: "14px 18px 8px", fontSize: 11, fontWeight: 700, color: T.textSec, textTransform: "uppercase", letterSpacing: "1px", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span>{meta.emoji}</span> {meta.label}
                   </div>
+                  {Object.entries(grouped[secKey] || {}).map(([topicName, vids]) => {
+                    const wCount = vids.filter(v => watched[v._id]).length;
+                    const isActive = selectedSection === secKey && activeTopic === topicName;
+                    const pct = Math.round((wCount / vids.length) * 100);
+                    return (
+                      <div key={topicName}
+                        onClick={() => { setSelectedSection(secKey); setSelectedTopic(topicName); }}
+                        style={{ padding: "11px 18px", cursor: "pointer", background: isActive ? T.primaryLight : "transparent", borderRight: isActive ? `3px solid ${T.primary}` : "3px solid transparent", transition: "all 0.15s" }}
+                        onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = T.bg; }}
+                        onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}>
+                        <div style={{ fontSize: 14, fontWeight: isActive ? 600 : 400, color: isActive ? T.primary : T.text, lineHeight: 1.3 }}>{topicName}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }}>
+                          <div style={{ flex: 1, height: 3, borderRadius: 2, background: T.border, overflow: "hidden" }}>
+                            <div style={{ height: "100%", borderRadius: 2, background: meta.color, width: `${pct}%`, transition: "width 0.3s" }} />
+                          </div>
+                          <span style={{ fontSize: 11, color: pct === 100 ? T.success : T.textSec, fontWeight: 600, whiteSpace: "nowrap" }}>{wCount}/{vids.length}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div style={{ height: 1, background: T.border, margin: "6px 0" }} />
                 </div>
-                {v.duration && (
-                  <div style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.75)", color: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12, fontWeight: 600 }}>
-                    {v.duration} мин
+              );
+            })}
+            {availableSections.length === 0 && (
+              <div style={{ padding: 24, color: T.textSec, fontSize: 14 }}>Видео байхгүй</div>
+            )}
+          </div>
+
+          {/* Right: video list */}
+          <div style={{ padding: 32 }}>
+            {videosInTopic.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 0" }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>🎬</div>
+                <div style={{ fontSize: 16, fontWeight: 600 }}>Одоогоор видео байхгүй байна</div>
+                <div style={{ fontSize: 14, color: T.textSec, marginTop: 8 }}>Удахгүй нэмэгдэх болно.</div>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                  <div>
+                    <div style={{ fontSize: 20, fontWeight: 700 }}>{activeTopic}</div>
+                    <div style={{ fontSize: 14, color: T.textSec, marginTop: 4 }}>{videosInTopic.filter(v => watched[v._id]).length}/{videosInTopic.length} хичээл үзсэн</div>
+                    <div style={{ marginTop: 8, maxWidth: 280 }}><ProgressBar pct={(videosInTopic.filter(v => watched[v._id]).length / videosInTopic.length) * 100} height={5} /></div>
                   </div>
-                )}
-              </div>
-              <div style={{ padding: 16 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.4, marginBottom: 10, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{v.title}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  {v.topicName && <span style={{ fontSize: 12, color: T.primary, fontWeight: 600 }}>{v.topicName}</span>}
-                  {v.difficulty && <span style={S.tag(diffBg(diffLabel(v.difficulty)), diffColor(diffLabel(v.difficulty)))}>{v.difficulty}</span>}
+                  <button onClick={() => setSelectedVideo(videosInTopic.find(v => !watched[v._id]) || videosInTopic[0])} style={S.btn()}>
+                    <Icon name="play" size={16} color="#fff" />
+                    {videosInTopic.some(v => !watched[v._id]) ? "Үргэлжлүүлэх" : "Дахин үзэх"}
+                  </button>
                 </div>
-                {v.viewCount > 0 && <div style={{ fontSize: 12, color: T.textTer, marginTop: 6 }}>{v.viewCount} үзэлт</div>}
-              </div>
-            </div>
-          ))}
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  {videosInTopic.map((v, i) => {
+                    const isW = watched[v._id];
+                    const dL = v.difficulty ? diffLabel(v.difficulty) : null;
+                    return (
+                      <div key={v._id} onClick={() => setSelectedVideo(v)}
+                        style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 16px", borderRadius: 12, cursor: "pointer", transition: "background 0.15s" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = T.bg; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: isW ? T.success : T.primaryLight, color: isW ? "#fff" : T.primary, fontSize: 14, fontWeight: 700 }}>
+                          {isW ? <Icon name="check" size={16} color="#fff" /> : i + 1}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 15, fontWeight: 500, color: isW ? T.textSec : T.text, lineHeight: 1.3 }}>{v.title}</div>
+                          <div style={{ display: "flex", gap: 10, marginTop: 5, alignItems: "center" }}>
+                            {v.duration && <span style={{ fontSize: 12, color: T.textSec, display: "flex", alignItems: "center", gap: 3 }}><Icon name="clock" size={12} color={T.textSec} /> {v.duration} мин</span>}
+                            {dL && <span style={S.tag(diffBg(dL), diffColor(dL))}>{v.difficulty}</span>}
+                          </div>
+                        </div>
+                        <div style={{ width: 80, height: 48, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+                          <img src={v.thumbnail || `https://img.youtube.com/vi/${v.youtubeId}/mqdefault.jpg`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        </div>
+                        <Icon name="play" size={18} color={T.textSec} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -1163,17 +1285,66 @@ const ProfilePage = () => {
         </div>
 
         {/* Subscription */}
-        <div style={S.card}>
-          <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 16 }}>Subscription</div>
-          <div style={{
-            background: `linear-gradient(135deg, ${T.primary}, #1a3a8a)`, borderRadius: 16, padding: 24, color: "#fff",
-          }}>
-            <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px", opacity: 0.8 }}>Одоогийн төлөвлөгөө</div>
-            <div style={{ fontSize: 28, fontWeight: 700, marginTop: 4 }}>{profile.plan}</div>
-            <div style={{ fontSize: 14, opacity: 0.8, marginTop: 8 }}>Бүх хичээл, тест, flashcard нээлттэй</div>
-            <div style={{ fontSize: 13, marginTop: 12, opacity: 0.7 }}>Дуусах: 2026.12.31</div>
+        <div style={{ ...S.card, gridColumn: "1 / -1" }}>
+          <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 16 }}>Гишүүнчлэл & Төлбөр</div>
+
+          {/* Current plan banner */}
+          <div style={{ background: `linear-gradient(135deg, ${T.primary}, #1a3a8a)`, borderRadius: 16, padding: 24, color: "#fff", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px", opacity: 0.75 }}>Одоогийн төлөвлөгөө</div>
+              <div style={{ fontSize: 26, fontWeight: 800, marginTop: 4 }}>{profile.plan} гишүүн</div>
+              <div style={{ fontSize: 13, opacity: 0.8, marginTop: 6 }}>Бүх хичээл, тест, flashcard нээлттэй</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 4 }}>Дуусах огноо</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>2026.12.31</div>
+              <div style={{ marginTop: 8, background: "rgba(255,255,255,0.2)", borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 600 }}>22 хоног үлдсэн</div>
+            </div>
           </div>
-          <button style={{ ...S.btn("outline"), width: "100%", marginTop: 16 }}>Төлөвлөгөө өөрчлөх</button>
+
+          {/* Plans */}
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Гишүүнчлэл сунгах</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
+            {[
+              { period: "1 сар", price: "35,000₮", perDay: "~1,167₮/өдөр", popular: false, save: null },
+              { period: "3 сар", price: "90,000₮", perDay: "~1,000₮/өдөр", popular: true, save: "14% хэмнэлт" },
+              { period: "6 сар", price: "160,000₮", perDay: "~889₮/өдөр", popular: false, save: "24% хэмнэлт" },
+            ].map((plan, i) => {
+              return (
+                <div key={i} style={{ position: "relative", borderRadius: 16, border: `2px solid ${plan.popular ? T.primary : T.border}`, padding: "20px 16px", textAlign: "center", background: plan.popular ? T.primaryLight : T.bg, cursor: "pointer", transition: "all 0.2s" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = T.primary; e.currentTarget.style.background = T.primaryLight; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = plan.popular ? T.primary : T.border; e.currentTarget.style.background = plan.popular ? T.primaryLight : T.bg; }}>
+                  {plan.popular && (
+                    <div style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", background: T.primary, color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20, whiteSpace: "nowrap" }}>
+                      ХАМГИЙН АЛДАРТАЙ
+                    </div>
+                  )}
+                  {plan.save && (
+                    <div style={{ ...S.tag(T.successLight, T.success), marginBottom: 8, fontSize: 11 }}>{plan.save}</div>
+                  )}
+                  <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>{plan.period}</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: T.primary }}>{plan.price}</div>
+                  <div style={{ fontSize: 11, color: T.textSec, marginTop: 4 }}>{plan.perDay}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Payment methods */}
+          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>Төлбөрийн хэлбэр</div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
+            {["QPay", "Хаан банк", "Голомт банк", "TDB", "Khan Bank Card"].map(m => (
+              <div key={m} style={{ padding: "8px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.bg, fontSize: 13, fontWeight: 500 }}>{m}</div>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", gap: 12 }}>
+            <button style={{ ...S.btn(), flex: 1 }}>
+              <Icon name="star" size={16} color="#fff" /> Сунгах — Төлбөр төлөх
+            </button>
+            <button style={{ ...S.btn("outline") }}>Асуух</button>
+          </div>
+          <div style={{ fontSize: 12, color: T.textSec, marginTop: 10 }}>Төлбөр хийсний дараа 24 цагийн дотор гишүүнчлэл идэвхжинэ. Асуудал гарвал холбоо барина уу.</div>
         </div>
 
         {/* Statistics */}
@@ -1211,6 +1382,108 @@ const ProfilePage = () => {
           to { transform: rotate(360deg); }
         }
       `}</style>
+    </div>
+  );
+};
+
+/* SETTINGS PAGE */
+const SettingsPage = () => {
+  const [openFaq, setOpenFaq] = useState(null);
+
+  const faqs = [
+    { q: "SAT шалгалт хэзээ болдог вэ?", a: "SAT шалгалт жилд 7 удаа зохион байгуулагддаг. 2026 оны хуваарь: 5/2, 6/6, 8/22, 10/3, 11/7, 12/5. Бүртгэл нь шалгалтаас ~5 долоо хоногийн өмнө хаагддаг." },
+    { q: "Practice Test-үүд яг бодит SAT-тай адил мөн үү?", a: "Манай practice test-үүд College Board-ын official SAT adaptive format-д суурилсан. Асуултын хүндийн зэрэг, хугацаа нь бодит шалгалттай адил." },
+    { q: "Нэг сарын бэлтгэлтэйгээр хэдэн оноо нэмэх вэ?", a: "Суурь мэдлэг, хичээл зүтгэлээс хамаарна. Дунджаар 50–150 оноо нэмэгдэж болно. Өдөрт 1–2 цаг тогтмол суралцах нь хамгийн үр дүнтэй." },
+    { q: "Flashcard-ыг хэрхэн хамгийн үр дүнтэй ашиглах вэ?", a: "Өдөрт 20–30 минут зарцуулж, 'Мэднэ' / 'Мэдэхгүй' гэж ангилан давт. Мэдэхгүй картуудаа дараагийн өдөр дахин хий. Spaced repetition хамгийн үр дүнтэй арга." },
+    { q: "Гишүүнчлэлийн төлбөрийг хэрхэн төлөх вэ?", a: "QPay болон банкны интернет банкингаар төлбөр хийнэ. Төлсний дараа 24 цагт таны бүртгэл идэвхжинэ. Асуудал гарвал info@lingosat.mn хаягт бичнэ үү." },
+    { q: "Нууц үгээ мартсан бол яах вэ?", a: "Нэвтрэх хуудасны 'Нууц үг мартсан' товч дарж, бүртгэлтэй имэйлээрээ баталгаажуулалтын код авна уу. Код 10 минутын хугацаатай." },
+    { q: "Хичээлийн явц хадгалагдаж байдаг уу?", a: "Тийм, нэвтэрсэн хэрэглэгчийн бүх явц (видео, flashcard, тест) автоматаар хадгалагдана. Олон төхөөрөмжийн хооронд синхрончлогдоно." },
+    { q: "Видео хичээлүүдийг offline үзэж болох уу?", a: "Одоогоор offline горим байхгүй. Видеонуудыг YouTube-ийн эрхтэй холбоотой учир интернэт шаардлагатай." },
+  ];
+
+  return (
+    <div style={{ maxWidth: 740 }}>
+      <div style={S.sectionTitle}>Тусламж & Мэдээлэл</div>
+
+      {/* FAQ */}
+      <div style={{ ...S.card, marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: T.accentLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Icon name="bulb" size={20} color="#B8860B" />
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>Түгээмэл асуулт хариулт</div>
+        </div>
+        {faqs.map((f, i) => (
+          <div key={i} style={{ borderTop: `1px solid ${T.border}` }}>
+            <div onClick={() => setOpenFaq(openFaq === i ? null : i)}
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "15px 0", cursor: "pointer", gap: 12 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.4 }}>{f.q}</div>
+              <div style={{ transform: openFaq === i ? "rotate(90deg)" : "rotate(0)", transition: "transform 0.2s", flexShrink: 0 }}>
+                <Icon name="chevron" size={18} color={T.textSec} />
+              </div>
+            </div>
+            {openFaq === i && (
+              <div style={{ padding: "0 0 16px", fontSize: 14, color: T.textSec, lineHeight: 1.7, borderTop: `1px dashed ${T.border}`, paddingTop: 12 }}>
+                {f.a}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Payment Terms */}
+      <div style={{ ...S.card, marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: T.successLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Icon name="shield" size={20} color={T.success} />
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>Үйлчилгээний нөхцөл & Төлбөр</div>
+        </div>
+        {[
+          { title: "Төлбөрийн хэлбэр", text: "QPay, Хаан банк, Голомт банк, TDB, Монголбанк болон бусад банкны интернет банкинг, дебит/кредит карт." },
+          { title: "Гишүүнчлэл идэвхжих", text: "Төлбөр баталгаажсанаас хойш 24 цагийн дотор автоматаар идэвхжинэ. Хүсэлтийн дагуу хурдасгаж болно." },
+          { title: "Буцаалтын нөхцөл", text: "Худалдан авалт хийснээс хойш 3 хоногийн дотор, хичээл үзэж эхлээгүй тохиолдолд бүрэн буцаалт хийнэ. 3 хоног өнгөрсөн буюу хэрэглэж эхэлсэн тохиолдолд буцаалт хийхгүй." },
+          { title: "Гишүүнчлэл дуусах", text: "Хугацаа дуусахаас 3 хоногийн өмнө имэйлээр мэдэгдэнэ. Сунгаагүй тохиолдолд хандалт хязгаарлагдана, гэхдээ өгөгдөл хадгалагдана." },
+          { title: "Үнийн өөрчлөлт", text: "Үнэ өөрчлөгдөх тохиолдолд 30 хоногийн өмнө мэдэгдэнэ. Идэвхтэй гишүүдэд хугацаа дуустал хуучин үнэ хамаарна." },
+          { title: "Хувийн мэдээлэл", text: "Таны мэдээлэл гуравдагч этгээдэд дамжуулахгүй. Зөвхөн үйлчилгээ сайжруулах зорилгоор нэрийн үсгийн статистик цуглуулна." },
+        ].map((item, i, arr) => (
+          <div key={i} style={{ padding: "14px 0", borderBottom: i < arr.length - 1 ? `1px solid ${T.border}` : "none" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{item.title}</div>
+            <div style={{ fontSize: 13, color: T.textSec, lineHeight: 1.7 }}>{item.text}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Contact */}
+      <div style={S.card}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: T.primaryLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Icon name="info" size={20} color={T.primary} />
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>Холбоо барих</div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {[
+            { label: "Имэйл", value: "info@lingosat.mn", icon: "info" },
+            { label: "Утас", value: "+976 9900-0000", icon: "user" },
+            { label: "Facebook", value: "fb.com/lingosat", icon: "bookmark" },
+            { label: "Ажлын цаг", value: "Даваа–Баасан 09:00–18:00", icon: "clock" },
+          ].map((c, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 12, background: T.bg }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: T.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Icon name={c.icon} size={18} color={T.primary} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: T.textSec, textTransform: "uppercase", letterSpacing: "0.5px" }}>{c.label}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2 }}>{c.value}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 16, padding: "14px 16px", borderRadius: 12, background: T.accentLight, fontSize: 13, color: "#8B6914", lineHeight: 1.6 }}>
+          Хурдан хариу авахын тулд имэйлд өөрийн нэр, бүртгэлтэй имэйл хаяг болон асуудлаа дэлгэрэнгүй бичнэ үү.
+        </div>
+      </div>
     </div>
   );
 };
@@ -1743,6 +2016,7 @@ export default function App() {
     { id: "topics", label: "Сэдэвчилсэн тест", icon: "topic" },
     { id: "flashcards", label: "Flashcards", icon: "flash" },
     { id: "news", label: "Мэдээ", icon: "news" },
+    { id: "settings", label: "Тусламж", icon: "info" },
     { id: "profile", label: "Миний бүртгэл", icon: "user" },
     ...(user && user.role === "admin" ? [{ id: "admin", label: "Admin Panel", icon: "settings" }] : []),
   ];
@@ -1755,6 +2029,7 @@ export default function App() {
       case "topics": return <TopicTestsPage onStartTest={startTest} />;
       case "flashcards": return <FlashcardsPage />;
       case "news": return <NewsPage />;
+      case "settings": return <SettingsPage />;
       case "profile": return <ProfilePage />;
       case "admin": return <AdminPanel />;
       case "testRunner": return <TestRunnerPage config={testConfig} onBack={() => navigate(testConfig?.type === "practice" ? "practice" : "topics")} />;
