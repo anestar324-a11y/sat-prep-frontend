@@ -314,10 +314,91 @@ const ProgressBar = ({ pct, color = T.primary, height = 6 }) => (
 /* ─── PAGES ─── */
 
 /* HOME PAGE */
-const HomePage = () => {
+const MONTHS_MN = ["1-р сар","2-р сар","3-р сар","4-р сар","5-р сар","6-р сар","7-р сар","8-р сар","9-р сар","10-р сар","11-р сар","12-р сар"];
+const DAYS_MN = ["Ня","Да","Мя","Лх","Пү","Ба","Бя"];
+
+const HomeModal = ({ open, onClose, title, children }) => {
+  if (!open) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={onClose}>
+      <div style={{ background: T.card, borderRadius: 24, padding: 32, width: "90%", maxWidth: 520, maxHeight: "82vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.2)" }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <div style={{ fontSize: 20, fontWeight: 700 }}>{title}</div>
+          <button onClick={onClose} style={{ background: T.bg, border: "none", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontSize: 20, color: T.textSec, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const HomePage = ({ navigate }) => {
   const today = new Date();
   const satDate = new Date(2026, 4, 2);
   const daysLeft = Math.ceil((satDate - today) / (1000 * 60 * 60 * 24));
+
+  const [stats, setStats] = useState(null);
+  const [lastScore, setLastScore] = useState(null);
+  const [studyDays, setStudyDays] = useState([]);
+  const [testHistory, setTestHistory] = useState([]);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [scoresOpen, setScoresOpen] = useState(false);
+  const [lessonsOpen, setLessonsOpen] = useState(false);
+  const [calMonth, setCalMonth] = useState(() => new Date());
+
+  const token = localStorage.getItem("sat_token");
+
+  useEffect(() => {
+    fetch(`${API_URL}/progress/stats`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json()).then(setStats).catch(() => {});
+    fetch(`${API_URL}/tests/history?testType=practice&limit=1`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json()).then(d => { if (d.results?.[0]?.satScore) setLastScore(d.results[0].satScore); })
+      .catch(() => {});
+  }, []);
+
+  const openCalendar = () => {
+    fetch(`${API_URL}/progress`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json()).then(d => setStudyDays(d.progress?.studyDays || [])).catch(() => {});
+    setCalendarOpen(true);
+  };
+
+  const openScores = () => {
+    fetch(`${API_URL}/tests/history?testType=practice&limit=20`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json()).then(d => setTestHistory(d.results || [])).catch(() => {});
+    setScoresOpen(true);
+  };
+
+  const allTopics = [...mathTopics, ...rwTopics];
+
+  const recentLessons = stats?.lessonsProgress?.length > 0
+    ? [...stats.lessonsProgress]
+        .sort((a, b) => new Date(b.lastAccessedAt) - new Date(a.lastAccessedAt))
+        .slice(0, 2)
+        .map(lp => ({
+          title: lp.topicName || allTopics.find(t => t.id === lp.topicId)?.name || "Хичээл",
+          topic: lp.section === "math" ? "SAT MATH" : "SAT READING",
+          progress: lp.progress || 0,
+          duration: `${lp.totalLessons || 10} хичээл`,
+          gradient: lp.section === "math" ? "linear-gradient(135deg, #1e1e2e, #2d2d3d)" : "linear-gradient(135deg, #1a365d, #2a4a7f)",
+        }))
+    : [
+        { title: "Heart of Algebra - Linear Equations", topic: "SAT MATH", progress: 75, duration: "12 мин", gradient: "linear-gradient(135deg, #1e1e2e, #2d2d3d)" },
+        { title: "Vocabulary in Context - Lesson 6", topic: "SAT READING", progress: 45, duration: "8 мин", gradient: "linear-gradient(135deg, #1a365d, #2a4a7f)" },
+      ];
+
+  // Calendar
+  const studyDaySet = new Set(studyDays.map(d => {
+    const dt = new Date(d.date);
+    return `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
+  }));
+  const calYear = calMonth.getFullYear();
+  const calMonthIdx = calMonth.getMonth();
+  const firstDayOfWeek = new Date(calYear, calMonthIdx, 1).getDay();
+  const daysInCalMonth = new Date(calYear, calMonthIdx + 1, 0).getDate();
+
+  const hoverCard = { transition: "all 0.2s ease" };
+  const onEnter = e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(59,107,245,0.12)"; };
+  const onLeave = e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; };
 
   return (
     <div>
@@ -345,7 +426,8 @@ const HomePage = () => {
 
       {/* Stats */}
       <div style={S.statsRow}>
-        <div style={S.statCard}>
+        {/* Score */}
+        <div style={{ ...S.statCard, ...hoverCard, cursor: "pointer" }} onClick={openScores} onMouseEnter={onEnter} onMouseLeave={onLeave}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: T.primaryLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Icon name="target" size={22} color={T.primary} />
@@ -353,9 +435,12 @@ const HomePage = () => {
             <div style={S.growthBadge}>+12% өсөлт</div>
           </div>
           <div style={S.statLabel}>Сүүлийн оноо</div>
-          <div style={S.statValue}>1420 <span style={{ fontSize: 16, color: T.textSec, fontWeight: 400 }}>/ 1600</span></div>
+          <div style={S.statValue}>{lastScore ?? 1420} <span style={{ fontSize: 16, color: T.textSec, fontWeight: 400 }}>/ 1600</span></div>
+          <div style={{ fontSize: 12, color: T.primary, marginTop: 6, fontWeight: 500 }}>Түүхийг харах →</div>
         </div>
-        <div style={S.statCard}>
+
+        {/* Streak */}
+        <div style={{ ...S.statCard, ...hoverCard, cursor: "pointer" }} onClick={openCalendar} onMouseEnter={onEnter} onMouseLeave={onLeave}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: T.orangeLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Icon name="fire" size={22} />
@@ -365,15 +450,19 @@ const HomePage = () => {
             </div>
           </div>
           <div style={S.statLabel}>Суралцсан хоног</div>
-          <div style={S.statValue}>14 <span style={{ fontSize: 16, color: T.textSec, fontWeight: 400 }}>өдөр дараалан</span> <Icon name="fire" size={20} /></div>
+          <div style={S.statValue}>{stats?.streak ?? 14} <span style={{ fontSize: 16, color: T.textSec, fontWeight: 400 }}>өдөр дараалан</span> <Icon name="fire" size={20} /></div>
+          <div style={{ fontSize: 12, color: T.primary, marginTop: 6, fontWeight: 500 }}>Календарь харах →</div>
         </div>
-        <div style={S.statCard}>
+
+        {/* Lessons */}
+        <div style={{ ...S.statCard, ...hoverCard, cursor: "pointer" }} onClick={() => setLessonsOpen(true)} onMouseEnter={onEnter} onMouseLeave={onLeave}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: T.successLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Icon name="check" size={22} color={T.success} />
           </div>
           <div style={S.statLabel}>Үзсэн хичээл</div>
-          <div style={S.statValue}>42 <span style={{ fontSize: 16, color: T.textSec, fontWeight: 400 }}>нийт 120-оос</span></div>
-          <div style={{ marginTop: 8 }}><ProgressBar pct={35} /></div>
+          <div style={S.statValue}>{stats?.totalLessonsCompleted ?? 42} <span style={{ fontSize: 16, color: T.textSec, fontWeight: 400 }}>нийт 120-оос</span></div>
+          <div style={{ marginTop: 8 }}><ProgressBar pct={Math.round(((stats?.totalLessonsCompleted ?? 42) / 120) * 100)} /></div>
+          <div style={{ fontSize: 12, color: T.primary, marginTop: 6, fontWeight: 500 }}>Дэлгэрэнгүй харах →</div>
         </div>
       </div>
 
@@ -385,29 +474,24 @@ const HomePage = () => {
               <div style={{ width: 4, height: 24, borderRadius: 2, background: T.accent }} />
               <span style={{ fontSize: 18, fontWeight: 700 }}>Үргэлжлүүлэн үзэх</span>
             </div>
-            <span style={{ color: T.primary, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Бүгдийг үзэх →</span>
+            <span onClick={() => navigate?.("lessons")} style={{ color: T.primary, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Бүгдийг үзэх →</span>
           </div>
-          {[
-            { title: "Heart of Algebra - Linear Equations", topic: "SAT Math", progress: 75, duration: "12 мин" },
-            { title: "Vocabulary in Context - Lesson 6", topic: "SAT Reading", progress: 45, duration: "8 мин" },
-          ].map((item, i) => (
-            <div key={i} style={{ ...S.card, marginBottom: 12, display: "flex", alignItems: "center", gap: 16 }}>
-              <div style={{
-                width: 56, height: 56, borderRadius: 12,
-                background: i === 0 ? "linear-gradient(135deg, #1e1e2e, #2d2d3d)" : "linear-gradient(135deg, #1a365d, #2a4a7f)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
+          {recentLessons.map((item, i) => (
+            <div key={i} onClick={() => navigate?.("lessons")} style={{ ...S.card, marginBottom: 12, display: "flex", alignItems: "center", gap: 16, cursor: "pointer", ...hoverCard }}
+              onMouseEnter={e => { onEnter(e); e.currentTarget.style.borderColor = T.primary; }}
+              onMouseLeave={e => { onLeave(e); e.currentTarget.style.borderColor = T.border; }}>
+              <div style={{ width: 56, height: 56, borderRadius: 12, background: item.gradient, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Icon name="play" size={24} color="#fff" />
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: T.primary, textTransform: "uppercase", letterSpacing: "0.5px" }}>{item.topic}</div>
-                <div style={{ fontSize: 15, fontWeight: 600, marginTop: 2 }}>{item.title}</div>
+                <div style={{ fontSize: 15, fontWeight: 600, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
                   <ProgressBar pct={item.progress} />
                   <span style={{ fontSize: 12, color: T.textSec, whiteSpace: "nowrap" }}>{item.progress}%</span>
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, color: T.textSec, fontSize: 13 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, color: T.textSec, fontSize: 13, flexShrink: 0 }}>
                 <Icon name="clock" size={14} color={T.textSec} /> {item.duration}
               </div>
             </div>
@@ -416,19 +500,135 @@ const HomePage = () => {
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <span style={{ fontSize: 18, fontWeight: 700 }}>Үгсийн сан</span>
-            <span style={{ color: T.primary, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Бүх карт →</span>
+            <span onClick={() => navigate?.("flashcards")} style={{ color: T.primary, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Бүх карт →</span>
           </div>
           <div style={{ ...S.card, textAlign: "center", padding: 32 }}>
             <div style={S.tag(T.dangerLight, T.danger)}>LEVEL: ADVANCED</div>
             <div style={{ fontSize: 42, fontWeight: 700, marginTop: 20, fontFamily: "'Playfair Display', serif" }}>Ephemeral</div>
             <div style={{ color: T.textSec, marginTop: 8, fontStyle: "italic", fontSize: 16 }}>/ɪˈfɛm(ə)r(ə)l/</div>
             <div style={{ marginTop: 16, color: T.textSec, fontSize: 14 }}>Lasting for a very short time</div>
-            <button style={{ ...S.btn("accent"), marginTop: 20, width: "100%" }}>
+            <button onClick={() => navigate?.("flashcards")} style={{ ...S.btn("accent"), marginTop: 20, width: "100%" }}>
               <Icon name="refresh" size={16} color={T.text} /> Дараагийн үг
             </button>
           </div>
         </div>
       </div>
+
+      {/* ── CALENDAR MODAL ── */}
+      <HomeModal open={calendarOpen} onClose={() => setCalendarOpen(false)} title="📅 Суралцсан өдрүүд">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <button onClick={() => setCalMonth(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+            style={{ background: T.bg, border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 18, fontFamily: "inherit", color: T.text }}>‹</button>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>{calYear} · {MONTHS_MN[calMonthIdx]}</div>
+          <button onClick={() => setCalMonth(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+            style={{ background: T.bg, border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 18, fontFamily: "inherit", color: T.text }}>›</button>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
+          {DAYS_MN.map(d => <div key={d} style={{ textAlign: "center", fontSize: 12, fontWeight: 600, color: T.textSec, padding: "4px 0" }}>{d}</div>)}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+          {Array.from({ length: firstDayOfWeek }).map((_, i) => <div key={`e${i}`} />)}
+          {Array.from({ length: daysInCalMonth }).map((_, i) => {
+            const day = i + 1;
+            const studied = studyDaySet.has(`${calYear}-${calMonthIdx}-${day}`);
+            const isToday = today.getFullYear() === calYear && today.getMonth() === calMonthIdx && today.getDate() === day;
+            return (
+              <div key={day} style={{
+                textAlign: "center", padding: "8px 4px", borderRadius: 10, fontSize: 14,
+                fontWeight: studied || isToday ? 700 : 400,
+                background: studied ? T.successLight : isToday ? T.primaryLight : "transparent",
+                color: studied ? T.success : isToday ? T.primary : T.text,
+                border: isToday ? `2px solid ${T.primary}` : studied ? `2px solid ${T.success}30` : "2px solid transparent",
+              }}>
+                {day}
+                {studied && <div style={{ width: 5, height: 5, borderRadius: "50%", background: T.success, margin: "2px auto 0" }} />}
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ marginTop: 20, display: "flex", gap: 20, fontSize: 13, color: T.textSec }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 14, height: 14, borderRadius: 4, background: T.successLight, border: `1px solid ${T.success}50` }} /> Суралцсан
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 14, height: 14, borderRadius: 4, background: T.primaryLight, border: `1px solid ${T.primary}60` }} /> Өнөөдөр
+          </div>
+        </div>
+      </HomeModal>
+
+      {/* ── SCORE HISTORY MODAL ── */}
+      <HomeModal open={scoresOpen} onClose={() => setScoresOpen(false)} title="📊 Оноогийн түүх">
+        {testHistory.length === 0 ? (
+          <div style={{ textAlign: "center", color: T.textSec, padding: "32px 0", fontSize: 15 }}>
+            Одоогоор оноо байхгүй байна.<br />
+            <span onClick={() => { setScoresOpen(false); navigate?.("practice"); }} style={{ color: T.primary, fontWeight: 600, cursor: "pointer" }}>Practice Test өгч эхлэх →</span>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {testHistory.map((t, i) => {
+              const prev = testHistory[i + 1];
+              const diff = prev?.satScore != null ? (t.satScore - prev.satScore) : null;
+              return (
+                <div key={t._id || i} style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", borderRadius: 14, background: i === 0 ? T.primaryLight : T.bg, border: `1px solid ${i === 0 ? T.primary + "30" : T.border}` }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: T.primary + "20", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: T.primary, flexShrink: 0 }}>
+                    #{t.practiceTestNumber || "T"}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600 }}>Practice Test {t.practiceTestNumber}</div>
+                    <div style={{ fontSize: 12, color: T.textSec, marginTop: 2 }}>
+                      {t.completedAt ? new Date(t.completedAt).toLocaleDateString("mn-MN") : ""}
+                      {t.mathScore && t.rwScore ? ` · Math: ${t.mathScore} / RW: ${t.rwScore}` : ""}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: T.primary }}>{t.satScore ?? t.score}</div>
+                    <div style={{ fontSize: 11, color: T.textSec }}>/1600</div>
+                  </div>
+                  {diff !== null && (
+                    <div style={{ fontSize: 13, fontWeight: 700, color: diff >= 0 ? T.success : T.danger, minWidth: 36, textAlign: "center" }}>
+                      {diff >= 0 ? "+" : ""}{diff}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </HomeModal>
+
+      {/* ── LESSONS MODAL ── */}
+      <HomeModal open={lessonsOpen} onClose={() => setLessonsOpen(false)} title="📚 Үзсэн хичээлүүд">
+        {(!stats?.lessonsProgress || stats.lessonsProgress.length === 0) ? (
+          <div style={{ textAlign: "center", color: T.textSec, padding: "32px 0", fontSize: 15 }}>
+            Одоогоор үзсэн хичээл байхгүй байна.<br />
+            <span onClick={() => { setLessonsOpen(false); navigate?.("lessons"); }} style={{ color: T.primary, fontWeight: 600, cursor: "pointer" }}>Хичээл үзэж эхлэх →</span>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {[...stats.lessonsProgress]
+              .sort((a, b) => new Date(b.lastAccessedAt) - new Date(a.lastAccessedAt))
+              .map((lp, i) => {
+                const topic = allTopics.find(t => t.id === lp.topicId);
+                return (
+                  <div key={i} onClick={() => { setLessonsOpen(false); navigate?.("lessons"); }}
+                    style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", borderRadius: 12, background: T.bg, cursor: "pointer", border: `1px solid ${T.border}`, transition: "all 0.2s" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = T.primaryLight; e.currentTarget.style.borderColor = T.primary + "40"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = T.bg; e.currentTarget.style.borderColor = T.border; }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 10, background: lp.section === "math" ? T.primaryLight : T.accentLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
+                      {lp.section === "math" ? "📐" : "📖"}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lp.topicName || topic?.name}</div>
+                      <div style={{ fontSize: 12, color: T.textSec, marginTop: 2 }}>{lp.section === "math" ? "SAT Math" : "SAT Reading & Writing"} · {lp.completedLessons}/{lp.totalLessons} хичээл</div>
+                      <div style={{ marginTop: 6 }}><ProgressBar pct={lp.progress} /></div>
+                    </div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: T.primary, flexShrink: 0 }}>{lp.progress}%</div>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+      </HomeModal>
     </div>
   );
 };
@@ -1205,7 +1405,7 @@ export default function App() {
 
   const renderPage = () => {
     switch (page) {
-      case "home": return <HomePage />;
+      case "home": return <HomePage navigate={navigate} />;
       case "lessons": return <LessonsPage />;
       case "practice": return <PracticeTestPage />;
       case "topics": return <TopicTestsPage />;
