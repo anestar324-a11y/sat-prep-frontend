@@ -1,7 +1,7 @@
 // ─── API Helper ───
 // Backend сервертэй холбогдох бүх функцууд
 
-const API_URL = "http://localhost:5001/api";
+const API_URL = "https://sat-prep-backend.onrender.com/api";
 
 // Token хадгалах / авах
 const getToken = () => localStorage.getItem("sat_token");
