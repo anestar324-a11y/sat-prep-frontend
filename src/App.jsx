@@ -1492,6 +1492,25 @@ const SettingsPage = () => {
 const NewsPage = () => {
   const [filter, setFilter] = useState("all");
   const [selectedArticle, setSelectedArticle] = useState(null);
+  const [articles, setArticles] = useState(newsArticles);
+
+  useEffect(() => {
+    const token = localStorage.getItem("sat_token");
+    fetch(`${API_URL}/news`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => { if (data.articles && data.articles.length > 0) setArticles(data.articles); })
+      .catch(() => {});
+  }, []);
+
+  const openArticle = (a) => {
+    const id = a._id || a.id;
+    if (!id || typeof id !== "string" || a.content) { setSelectedArticle(a); return; }
+    const token = localStorage.getItem("sat_token");
+    fetch(`${API_URL}/news/${id}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => setSelectedArticle(data.article || a))
+      .catch(() => setSelectedArticle(a));
+  };
 
   const catColors = {
     tips: { bg: T.accentLight, color: "#B8860B", icon: "bulb" },
@@ -1499,8 +1518,8 @@ const NewsPage = () => {
     strategy: { bg: T.orangeLight, color: T.orange, icon: "target" },
   };
 
-  const filtered = filter === "all" ? newsArticles : newsArticles.filter((a) => a.category === filter);
-  const pinned = newsArticles.filter((a) => a.pinned);
+  const filtered = filter === "all" ? articles : articles.filter((a) => a.category === filter);
+  const pinned = articles.filter((a) => a.pinned);
 
   if (selectedArticle) {
     const a = selectedArticle;
@@ -1518,7 +1537,7 @@ const NewsPage = () => {
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
               <span style={S.tag(cc.bg, cc.color)}>{a.emoji} {a.categoryLabel}</span>
-              <span style={{ fontSize: 13, color: T.textSec }}>{a.date}</span>
+              <span style={{ fontSize: 13, color: T.textSec }}>{a.createdAt ? new Date(a.createdAt).toISOString().slice(0,10) : a.date}</span>
               <span style={{ fontSize: 13, color: T.textSec, display: "flex", alignItems: "center", gap: 4 }}>
                 <Icon name="clock" size={14} color={T.textSec} /> {a.readTime}
               </span>
@@ -1528,7 +1547,7 @@ const NewsPage = () => {
           </div>
           {/* Article body */}
           <div style={{ padding: "32px 40px 40px" }}>
-            {a.content.map((block, i) => (
+            {(a.content || []).map((block, i) => (
               block.type === "heading" ? (
                 <h2 key={i} style={{
                   fontSize: 19, fontWeight: 700, marginTop: i === 0 ? 0 : 28, marginBottom: 12,
@@ -1582,7 +1601,7 @@ const NewsPage = () => {
             {pinned.map((a) => {
               const cc = catColors[a.category];
               return (
-                <div key={a.id} onClick={() => setSelectedArticle(a)} style={{
+                <div key={a._id || a.id} onClick={() => openArticle(a)} style={{
                   ...S.card, padding: 0, overflow: "hidden", cursor: "pointer",
                   border: `2px solid ${T.primary}20`,
                 }}>
@@ -1599,7 +1618,7 @@ const NewsPage = () => {
                       {a.summary}
                     </p>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14 }}>
-                      <span style={{ fontSize: 12, color: T.textSec }}>{a.date}</span>
+                      <span style={{ fontSize: 12, color: T.textSec }}>{a.createdAt ? new Date(a.createdAt).toISOString().slice(0,10) : a.date}</span>
                       <span style={{ fontSize: 12, color: T.textSec, display: "flex", alignItems: "center", gap: 4 }}>
                         <Icon name="clock" size={12} color={T.textSec} /> {a.readTime}
                       </span>
@@ -1617,7 +1636,7 @@ const NewsPage = () => {
         {filtered.map((a) => {
           const cc = catColors[a.category];
           return (
-            <div key={a.id} onClick={() => setSelectedArticle(a)} style={{
+            <div key={a._id || a.id} onClick={() => openArticle(a)} style={{
               ...S.card, display: "flex", alignItems: "center", gap: 20, cursor: "pointer",
             }}>
               <div style={{
@@ -1633,7 +1652,7 @@ const NewsPage = () => {
                 <p style={{ color: T.textSec, fontSize: 13, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.summary}</p>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: 12, color: T.textSec }}>{a.date}</div>
+                <div style={{ fontSize: 12, color: T.textSec }}>{a.createdAt ? new Date(a.createdAt).toISOString().slice(0,10) : a.date}</div>
                 <div style={{ fontSize: 12, color: T.textSec, marginTop: 4, display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
                   <Icon name="clock" size={12} color={T.textSec} /> {a.readTime}
                 </div>

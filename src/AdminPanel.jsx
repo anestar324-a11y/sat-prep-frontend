@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { newsAPI } from "./api";
 
 const C = {
   bg: "#0B0E14", surface: "#111620", surfaceHover: "#161C28", card: "#141924",
@@ -164,9 +165,19 @@ export default function SATAdminPanel() {
   const [modal, setModal] = useState(null);
   const [lessons, setLessons] = useState(initLessons);
   const [flashcards, setFlashcards] = useState(initFlashcards);
-  const [news, setNews] = useState(initNews);
+  const [news, setNews] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(false);
   const [form, setForm] = useState({});
+
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    setNewsLoading(true);
+    newsAPI.getAll()
+      .then(data => setNews(data.articles || []))
+      .catch(() => setNews(initNews))
+      .finally(() => setNewsLoading(false));
+  }, []);
 
   const openModal = (type, data = null) => {
     if (type === "lesson") setForm(data ? { ...data, newUrl: "" } : { title: "", section: "Math", level: "Beginner", duration: "", desc: "", videoCount: 0, youtubeUrls: [], newUrl: "" });
@@ -182,15 +193,35 @@ export default function SATAdminPanel() {
       if (modal.editing) setFlashcards(fs => fs.map(f => f.id === modal.data.id ? { ...f, ...form } : f));
       else setFlashcards(fs => [...fs, { ...form, id: Date.now(), mastered: 0, color: [C.accent, C.success, C.pink, C.cyan, C.warning, "#9B59B6"][Math.floor(Math.random() * 6)] }]);
     } else if (modal.type === "news") {
-      if (modal.editing) setNews(ns => ns.map(n => n.id === modal.data.id ? { ...n, ...form } : n));
-      else setNews(ns => [{ ...form, id: Date.now(), date: new Date().toISOString().slice(0, 10), views: 0, image: false }, ...ns]);
+      const payload = {
+        title: form.title,
+        summary: form.excerpt || form.summary || "",
+        category: form.category,
+        categoryLabel: form.category,
+        published: form.status === "published",
+        pinned: form.pinned || false,
+        content: form.content || [],
+      };
+      if (modal.editing) {
+        newsAPI.update(modal.data._id || modal.data.id, payload)
+          .then(data => setNews(ns => ns.map(n => (n._id || n.id) === (modal.data._id || modal.data.id) ? data.article : n)))
+          .catch(err => console.error("Мэдээ засах алдаа:", err));
+      } else {
+        newsAPI.create(payload)
+          .then(data => setNews(ns => [data.article, ...ns]))
+          .catch(err => console.error("Мэдээ нэмэх алдаа:", err));
+      }
     }
     setModal(null);
   };
   const deleteItem = (type, id) => {
     if (type === "lesson") setLessons(ls => ls.filter(l => l.id !== id));
     else if (type === "flashcard") setFlashcards(fs => fs.filter(f => f.id !== id));
-    else if (type === "news") setNews(ns => ns.filter(n => n.id !== id));
+    else if (type === "news") {
+      newsAPI.delete(id)
+        .then(() => setNews(ns => ns.filter(n => (n._id || n.id) !== id)))
+        .catch(err => console.error("Мэдээ устгах алдаа:", err));
+    }
   };
 
   const navItems = [
@@ -457,29 +488,33 @@ export default function SATAdminPanel() {
         <div style={{ display: "flex", gap: 8 }}>{["Бүгд", "Мэдээ", "Зөвлөгөө", "Амжилт", "Шинэчлэл"].map(f => <button key={f} style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.border}`, cursor: "pointer", background: f === "Бүгд" ? C.accent + "22" : "transparent", color: f === "Бүгд" ? C.accentLight : C.textSec, fontSize: 12, fontWeight: 500 }}>{f}</button>)}</div>
         <Btn primary onClick={() => openModal("news")}><Icon d={ic.plus} size={14} color="#fff" /> Мэдээ нэмэх</Btn>
       </div>
+      {newsLoading && <div style={{ textAlign: "center", color: C.textSec, padding: 40 }}>Уншиж байна...</div>}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {fNews.map(n => (
-          <div key={n.id} style={{ background: C.card, borderRadius: 14, padding: 20, border: `1px solid ${C.border}`, display: "flex", gap: 20, transition: "all 0.15s" }} onMouseEnter={e => e.currentTarget.style.borderColor = C.accent + "44"} onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
-            {n.image && <div style={{ width: 120, height: 90, borderRadius: 10, background: `linear-gradient(135deg, ${C.accent}33, ${C.pink}33)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon d={ic.image} size={28} color={C.accentLight} /></div>}
+        {fNews.map(n => {
+          const nId = n._id || n.id;
+          const isPublished = n.published || n.status === "published";
+          return (
+          <div key={nId} style={{ background: C.card, borderRadius: 14, padding: 20, border: `1px solid ${C.border}`, display: "flex", gap: 20, transition: "all 0.15s" }} onMouseEnter={e => e.currentTarget.style.borderColor = C.accent + "44"} onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                <div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{n.title}</div><div style={{ fontSize: 13, color: C.textSec, lineHeight: 1.5 }}>{n.excerpt}</div></div>
-                <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: n.status === "published" ? C.successBg : C.warningBg, color: n.status === "published" ? C.success : C.warning, flexShrink: 0, marginLeft: 12 }}>{n.status === "published" ? "Нийтлэгдсэн" : "Ноорог"}</span>
+                <div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{n.title}</div><div style={{ fontSize: 13, color: C.textSec, lineHeight: 1.5 }}>{n.summary || n.excerpt}</div></div>
+                <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: isPublished ? C.successBg : C.warningBg, color: isPublished ? C.success : C.warning, flexShrink: 0, marginLeft: 12 }}>{isPublished ? "Нийтлэгдсэн" : "Ноорог"}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
                 <div style={{ display: "flex", gap: 16, fontSize: 12, color: C.textMut, alignItems: "center" }}>
-                  <span>{n.date}</span>
+                  <span>{n.createdAt ? new Date(n.createdAt).toISOString().slice(0, 10) : n.date}</span>
                   <span style={{ padding: "2px 8px", borderRadius: 6, background: C.border + "66" }}>{n.category}</span>
-                  {n.views > 0 && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Icon d={ic.eye} size={12} color={C.textMut} /> {n.views}</span>}
+                  {n.pinned && <span style={{ color: C.warning }}>📌 Онцлох</span>}
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => openModal("news", n)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.edit} size={14} color={C.textSec} /></button>
-                  <button onClick={() => deleteItem("news", n.id)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.trash} size={14} color={C.danger} /></button>
+                  <button onClick={() => openModal("news", { ...n, excerpt: n.summary || n.excerpt, status: isPublished ? "published" : "draft" })} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.edit} size={14} color={C.textSec} /></button>
+                  <button onClick={() => deleteItem("news", nId)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.trash} size={14} color={C.danger} /></button>
                 </div>
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

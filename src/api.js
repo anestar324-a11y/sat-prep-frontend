@@ -228,4 +228,27 @@ export const newsAPI = {
   getById: async (id) => {
     return await apiFetch(`/news/${id}`);
   },
+
+  // Мэдээ нэмэх
+  create: async (data) => {
+    return await apiFetch("/news", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Мэдээ шинэчлэх
+  update: async (id, data) => {
+    return await apiFetch(`/news/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Мэдээ устгах
+  delete: async (id) => {
+    return await apiFetch(`/news/${id}`, {
+      method: "DELETE",
+    });
+  },
 };
