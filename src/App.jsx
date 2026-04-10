@@ -2016,7 +2016,6 @@ export default function App() {
     { id: "topics", label: "Сэдэвчилсэн тест", icon: "topic" },
     { id: "flashcards", label: "Flashcards", icon: "flash" },
     { id: "news", label: "Мэдээ", icon: "news" },
-    { id: "settings", label: "Тусламж", icon: "info" },
     { id: "profile", label: "Миний бүртгэл", icon: "user" },
     ...(user && user.role === "admin" ? [{ id: "admin", label: "Admin Panel", icon: "settings" }] : []),
   ];
@@ -2076,8 +2075,8 @@ export default function App() {
             </button>
           </div>
           <div style={{ padding: "16px 24px", marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, color: T.textSec, fontSize: 14, cursor: "pointer" }}>
-              <Icon name="settings" size={16} color={T.textSec} /> Тусламж
+            <div onClick={() => navigate("settings")} style={{ display: "flex", alignItems: "center", gap: 8, color: page === "settings" ? T.primary : T.textSec, fontSize: 14, cursor: "pointer", fontWeight: page === "settings" ? 600 : 400 }}>
+              <Icon name="settings" size={16} color={page === "settings" ? T.primary : T.textSec} /> Тусламж
             </div>
             <div onClick={handleLogout} style={{ display: "flex", alignItems: "center", gap: 8, color: T.textSec, fontSize: 14, cursor: "pointer" }}>
               <Icon name="logout" size={16} color={T.textSec} /> Гарах
