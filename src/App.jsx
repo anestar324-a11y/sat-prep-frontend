@@ -324,7 +324,7 @@ const HomePage = () => {
       <div style={S.topBar}>
         <div>
           <div style={S.badge}>⊕ ШИНЭ АМЖИЛТ!</div>
-          <div style={S.greeting}>Сайн байна уу, Бат! <Icon name="wave" size={32} /></div>
+          <div style={S.greeting}>Сайн байна уу, {(() => { try { return JSON.parse(localStorage.getItem("sat_user"))?.name } catch { return "" } })() || "Сурагч"}! <Icon name="wave" size={32} /></div>
           <div style={S.subGreeting}>Өнөөдөр суралцахад таатай өдөр байна.</div>
         </div>
         <div style={{ textAlign: "right" }}>
