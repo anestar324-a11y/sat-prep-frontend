@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { LoginPage, RegisterPage } from "./AuthPages";
 import AdminPanel from "./AdminPanel";
+const API_URL = "https://sat-prep-backend.onrender.com/api"
 /* ─── colour tokens ─── */
 const T = {
   bg: "#F7F8FA",
@@ -752,13 +753,83 @@ const FlashcardsPage = () => {
 
 /* PROFILE PAGE */
 const ProfilePage = () => {
+  // localStorage-оос хэрэглэгчийн мэдээлэл унших
+  const savedUser = (() => {
+    try {
+      const raw = localStorage.getItem("sat_user");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  })();
+
   const [profile, setProfile] = useState({
-    name: "Бат", phone: "+976 9911 2233", email: "bat@example.com", plan: "Premium",
+    name: savedUser?.name || "",
+    phone: savedUser?.phone || "",
+    email: savedUser?.email || "",
+    plan: savedUser?.plan || "Premium",
   });
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState(null); // { type: "success"|"error", text: "..." }
+
+  // Профайл хадгалах — PUT /api/auth/me
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage(null);
+    try {
+      const token = localStorage.getItem("sat_token");
+      if (!token) throw new Error("Нэвтрэх шаардлагатай");
+
+      const res = await fetch(`${API_URL}/auth/me`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: profile.name,
+          phone: profile.phone,
+          email: profile.email,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Хадгалахад алдаа гарлаа");
+
+      // localStorage дээрх хэрэглэгчийн мэдээллийг шинэчлэх
+      const updatedUser = { ...savedUser, ...data.user, name: profile.name, phone: profile.phone, email: profile.email };
+      localStorage.setItem("sat_user", JSON.stringify(updatedUser));
+
+      setMessage({ type: "success", text: "Амжилттай хадгалагдлаа!" });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      setMessage({ type: "error", text: err.message || "Хадгалахад алдаа гарлаа" });
+      setTimeout(() => setMessage(null), 4000);
+    }
+    setSaving(false);
+  };
+
+  // Нэрний эхний үсэг (аватар)
+  const initial = profile.name ? profile.name.charAt(0).toUpperCase() : "?";
 
   return (
     <div>
       <div style={S.sectionTitle}>Миний бүртгэл</div>
+
+      {/* Амжилт / Алдааны мэдэгдэл */}
+      {message && (
+        <div style={{
+          padding: "12px 20px", borderRadius: 12, marginBottom: 20,
+          background: message.type === "success" ? T.successLight : T.dangerLight,
+          color: message.type === "success" ? T.success : T.danger,
+          fontSize: 14, fontWeight: 600,
+          display: "flex", alignItems: "center", gap: 8,
+          animation: "fadeIn 0.3s ease",
+        }}>
+          <Icon name={message.type === "success" ? "check" : "info"} size={18}
+            color={message.type === "success" ? T.success : T.danger} />
+          {message.text}
+        </div>
+      )}
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
         {/* Personal Info */}
         <div style={{ ...S.card, gridColumn: "1 / -1" }}>
@@ -767,10 +838,10 @@ const ProfilePage = () => {
               width: 72, height: 72, borderRadius: "50%", background: `linear-gradient(135deg, ${T.primary}, ${T.accent})`,
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 28, fontWeight: 700, color: "#fff",
-            }}>Б</div>
+            }}>{initial}</div>
             <div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>{profile.name}</div>
-              <div style={{ fontSize: 14, color: T.textSec }}>Premium гишүүн</div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>{profile.name || "Нэр оруулна уу"}</div>
+              <div style={{ fontSize: 14, color: T.textSec }}>{profile.plan} гишүүн</div>
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
@@ -794,7 +865,34 @@ const ProfilePage = () => {
               </div>
             ))}
           </div>
-          <button style={{ ...S.btn(), marginTop: 24 }}>Хадгалах</button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              ...S.btn(),
+              marginTop: 24,
+              opacity: saving ? 0.7 : 1,
+              cursor: saving ? "not-allowed" : "pointer",
+              display: "flex", alignItems: "center", gap: 8,
+            }}
+          >
+            {saving ? (
+              <>
+                <span style={{
+                  width: 16, height: 16, border: "2px solid rgba(255,255,255,0.3)",
+                  borderTopColor: "#fff", borderRadius: "50%",
+                  display: "inline-block",
+                  animation: "spin 0.6s linear infinite",
+                }} />
+                Хадгалж байна...
+              </>
+            ) : (
+              <>
+                <Icon name="check" size={16} color="#fff" />
+                Хадгалах
+              </>
+            )}
+          </button>
         </div>
 
         {/* Subscription */}
@@ -804,7 +902,7 @@ const ProfilePage = () => {
             background: `linear-gradient(135deg, ${T.primary}, #1a3a8a)`, borderRadius: 16, padding: 24, color: "#fff",
           }}>
             <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px", opacity: 0.8 }}>Одоогийн төлөвлөгөө</div>
-            <div style={{ fontSize: 28, fontWeight: 700, marginTop: 4 }}>Premium</div>
+            <div style={{ fontSize: 28, fontWeight: 700, marginTop: 4 }}>{profile.plan}</div>
             <div style={{ fontSize: 14, opacity: 0.8, marginTop: 8 }}>Бүх хичээл, тест, flashcard нээлттэй</div>
             <div style={{ fontSize: 13, marginTop: 12, opacity: 0.7 }}>Дуусах: 2026.12.31</div>
           </div>
@@ -839,6 +937,13 @@ const ProfilePage = () => {
           </button>
         </div>
       </div>
+
+      {/* Spinner animation */}
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
