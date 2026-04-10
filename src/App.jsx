@@ -633,53 +633,118 @@ const HomePage = ({ navigate }) => {
   );
 };
 
-/* LESSONS PAGE */
-const LessonsPage = () => {
+/* VIDEOS PAGE */
+const VideosPage = () => {
   const [tab, setTab] = useState("math");
-  const topics = tab === "math" ? mathTopics : rwTopics;
+  const [videos, setVideos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedVideo, setSelectedVideo] = useState(null);
+
+  const token = localStorage.getItem("sat_token");
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`${API_URL}/videos?section=${tab}&published=true`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { setVideos(d.videos || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [tab]);
+
+  const diffLabel = (d) => d === "beginner" ? "Easy" : d === "intermediate" ? "Medium" : "Hard";
+
+  if (selectedVideo) {
+    return (
+      <div>
+        <button onClick={() => setSelectedVideo(null)} style={{ ...S.btn("outline"), marginBottom: 24 }}>← Буцах</button>
+        <div style={S.card}>
+          <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", borderRadius: 12, marginBottom: 24 }}>
+            <iframe
+              src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=1`}
+              style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>{selectedVideo.title}</h2>
+          {selectedVideo.description && <p style={{ color: T.textSec, fontSize: 15, lineHeight: 1.6, marginBottom: 16 }}>{selectedVideo.description}</p>}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {selectedVideo.topicName && <span style={S.tag(T.primaryLight, T.primary)}>{selectedVideo.topicName}</span>}
+            {selectedVideo.difficulty && <span style={S.tag(diffBg(diffLabel(selectedVideo.difficulty)), diffColor(diffLabel(selectedVideo.difficulty)))}>{selectedVideo.difficulty}</span>}
+            {selectedVideo.duration && (
+              <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: T.textSec }}>
+                <Icon name="clock" size={14} color={T.textSec} /> {selectedVideo.duration} мин
+              </span>
+            )}
+            {selectedVideo.viewCount > 0 && <span style={{ fontSize: 13, color: T.textSec }}>{selectedVideo.viewCount} үзэлт</span>}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div style={S.sectionTitle}>Хичээлүүд</div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-        {[["math", "SAT Math"], ["rw", "SAT Reading & Writing"]].map(([k, label]) => (
-          <button key={k} onClick={() => setTab(k)} style={{
-            ...S.btn(tab === k ? "primary" : "outline"),
-            borderRadius: 24, fontSize: 14,
-          }}>{label}</button>
+      <div style={S.sectionTitle}>Видео хичээлүүд</div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 28 }}>
+        {[["math", "SAT Math"], ["reading-writing", "SAT Reading & Writing"], ["general", "Ерөнхий"]].map(([k, label]) => (
+          <button key={k} onClick={() => setTab(k)} style={{ ...S.btn(tab === k ? "primary" : "outline"), borderRadius: 24, fontSize: 14 }}>{label}</button>
         ))}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {topics.map((t) => (
-          <div key={t.id} style={{ ...S.card, display: "flex", alignItems: "center", gap: 20 }}>
-            <div style={{
-              width: 64, height: 64, borderRadius: 16,
-              background: t.progress > 0 ? `linear-gradient(135deg, ${T.primary}, #2451D4)` : T.border,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: t.progress > 0 ? "#fff" : T.textSec, fontSize: 24, fontWeight: 700,
-            }}>
-              {t.progress > 0 ? `${t.progress}%` : <Icon name="lock" size={24} color={T.textSec} />}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 17, fontWeight: 600 }}>{t.name}</div>
-              <div style={{ fontSize: 13, color: T.textSec, marginTop: 4 }}>{t.desc}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10 }}>
-                <div style={{ flex: 1 }}><ProgressBar pct={t.progress} /></div>
-                <span style={{ fontSize: 12, color: T.textSec }}>{t.lessons} хичээл</span>
+
+      {loading ? (
+        <div style={{ textAlign: "center", padding: "80px 0", color: T.textSec }}>
+          <div style={{ width: 36, height: 36, border: `3px solid ${T.border}`, borderTopColor: T.primary, borderRadius: "50%", margin: "0 auto 16px", animation: "spin 0.8s linear infinite" }} />
+          Ачааллаж байна...
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      ) : videos.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "80px 0" }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>🎬</div>
+          <div style={{ fontSize: 18, fontWeight: 600 }}>Одоогоор видео байхгүй байна</div>
+          <div style={{ fontSize: 14, color: T.textSec, marginTop: 8 }}>Удахгүй шинэ видео хичээлүүд нэмэгдэх болно.</div>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+          {videos.map(v => (
+            <div key={v._id} onClick={() => setSelectedVideo(v)}
+              style={{ ...S.card, cursor: "pointer", padding: 0, overflow: "hidden", transition: "all 0.2s ease" }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 12px 32px rgba(59,107,245,0.15)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
+              <div style={{ position: "relative" }}>
+                <img
+                  src={v.thumbnail || `https://img.youtube.com/vi/${v.youtubeId}/mqdefault.jpg`}
+                  alt={v.title}
+                  style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }}
+                />
+                <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.92)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon name="play" size={20} color={T.primary} />
+                  </div>
+                </div>
+                {v.duration && (
+                  <div style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.75)", color: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12, fontWeight: 600 }}>
+                    {v.duration} мин
+                  </div>
+                )}
+              </div>
+              <div style={{ padding: 16 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.4, marginBottom: 10, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{v.title}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  {v.topicName && <span style={{ fontSize: 12, color: T.primary, fontWeight: 600 }}>{v.topicName}</span>}
+                  {v.difficulty && <span style={S.tag(diffBg(diffLabel(v.difficulty)), diffColor(diffLabel(v.difficulty)))}>{v.difficulty}</span>}
+                </div>
+                {v.viewCount > 0 && <div style={{ fontSize: 12, color: T.textTer, marginTop: 6 }}>{v.viewCount} үзэлт</div>}
               </div>
             </div>
-            <button style={S.btn(t.progress > 0 ? "primary" : "outline")}>
-              {t.progress > 0 ? "Үргэлжлүүлэх" : "Эхлэх"} <Icon name="chevron" size={16} color={t.progress > 0 ? "#fff" : T.primary} />
-            </button>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
 
 /* PRACTICE TEST PAGE */
-const PracticeTestPage = () => {
+const PracticeTestPage = ({ onStartTest }) => {
   const [modal, setModal] = useState(false);
   const [selectedTest, setSelectedTest] = useState(null);
 
@@ -724,7 +789,7 @@ const PracticeTestPage = () => {
                 <div style={{ fontSize: 13, color: T.textSec }}>Оноо</div>
                 <div style={{ fontSize: 28, fontWeight: 700, color: T.primary }}>{t.score} <span style={{ fontSize: 14, color: T.textSec, fontWeight: 400 }}>/ 1600</span></div>
                 <div style={{ fontSize: 12, color: T.textSec, marginTop: 4 }}>{t.date}</div>
-                <button style={{ ...S.btn("outline"), width: "100%", marginTop: 16 }}>Дахин өгөх</button>
+                <button onClick={() => startTest(t)} style={{ ...S.btn("outline"), width: "100%", marginTop: 16 }}>Дахин өгөх</button>
               </div>
             ) : (
               <div style={{ marginTop: 16 }}>
@@ -752,15 +817,17 @@ const PracticeTestPage = () => {
             <div style={{ color: T.textSec, marginBottom: 24 }}>{selectedTest?.name} - Ямар хэсгийг хийх вэ?</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {[
-                { label: "Reading & Writing", desc: "64 минут, 54 асуулт", icon: "book" },
-                { label: "Mathematics", desc: "70 минут, 44 асуулт", icon: "target" },
-                { label: "Бүтэн шалгалт", desc: "~3 цаг 15 мин, 98 асуулт", icon: "test" },
+                { label: "Reading & Writing", desc: "64 минут, 54 асуулт", icon: "book", section: "reading-writing" },
+                { label: "Mathematics", desc: "70 минут, 44 асуулт", icon: "target", section: "math" },
+                { label: "Бүтэн шалгалт", desc: "~3 цаг 15 мин, 98 асуулт", icon: "test", section: "full" },
               ].map((opt, i) => (
-                <button key={i} style={{
-                  display: "flex", alignItems: "center", gap: 16, padding: "16px 20px",
-                  borderRadius: 14, border: `2px solid ${T.border}`, background: T.bg,
-                  cursor: "pointer", textAlign: "left", fontFamily: "inherit", transition: "all 0.2s",
-                }}
+                <button key={i}
+                  onClick={() => { setModal(false); onStartTest({ type: "practice", testNumber: selectedTest.id, section: opt.section, title: `${selectedTest.name} — ${opt.label}` }); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 16, padding: "16px 20px",
+                    borderRadius: 14, border: `2px solid ${T.border}`, background: T.bg,
+                    cursor: "pointer", textAlign: "left", fontFamily: "inherit", transition: "all 0.2s",
+                  }}
                   onMouseOver={(e) => { e.currentTarget.style.borderColor = T.primary; e.currentTarget.style.background = T.primaryLight; }}
                   onMouseOut={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.bg; }}
                 >
@@ -790,7 +857,7 @@ const PracticeTestPage = () => {
 };
 
 /* TOPIC TESTS PAGE */
-const TopicTestsPage = () => {
+const TopicTestsPage = ({ onStartTest }) => {
   const [tab, setTab] = useState("math");
   const [diff, setDiff] = useState("All");
   const tests = topicTests[tab];
@@ -833,7 +900,7 @@ const TopicTestsPage = () => {
                 </div>
               )}
             </div>
-            <button style={S.btn(t.bestScore !== null ? "outline" : "primary")}>
+            <button onClick={() => onStartTest({ type: "topic", topicId: t.id, title: t.name })} style={S.btn(t.bestScore !== null ? "outline" : "primary")}>
               {t.bestScore !== null ? "Дахин" : "Эхлэх"}
             </button>
           </div>
@@ -1307,6 +1374,277 @@ const NewsPage = () => {
   );
 };
 
+/* TEST RUNNER PAGE */
+const TestRunnerPage = ({ config, onBack }) => {
+  const [questions, setQuestions] = useState([]);
+  const [answers, setAnswers] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [startedAt] = useState(new Date());
+  const [elapsed, setElapsed] = useState(0);
+  const [submitted, setSubmitted] = useState(false);
+  const [result, setResult] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const token = localStorage.getItem("sat_token");
+
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        let url;
+        if (config.type === "practice") {
+          url = `${API_URL}/questions/practice-test/${config.testNumber}`;
+        } else {
+          url = `${API_URL}/questions/topic/${config.topicId}`;
+        }
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        let qs = [];
+        if (config.type === "practice") {
+          if (config.section === "math") qs = data.math || [];
+          else if (config.section === "reading-writing") qs = data.readingWriting || [];
+          else qs = [...(data.readingWriting || []), ...(data.math || [])];
+        } else {
+          qs = data.questions || [];
+        }
+        setQuestions(qs);
+        setLoading(false);
+      } catch {
+        setError("Асуулт ачааллахад алдаа гарлаа");
+        setLoading(false);
+      }
+    };
+    fetchQuestions();
+  }, []);
+
+  useEffect(() => {
+    if (submitted || loading) return;
+    const timer = setInterval(() => setElapsed(e => e + 1), 1000);
+    return () => clearInterval(timer);
+  }, [submitted, loading]);
+
+  const formatTime = (secs) => `${Math.floor(secs / 60)}:${(secs % 60).toString().padStart(2, "0")}`;
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    const perQ = Math.floor(elapsed / Math.max(questions.length, 1));
+    const answersArr = questions.map(q => ({
+      question: q._id,
+      selectedAnswer: answers[q._id] || null,
+      timeSpent: perQ,
+    }));
+    try {
+      const body = {
+        testType: config.type,
+        answers: answersArr,
+        totalTime: elapsed,
+        startedAt: startedAt.toISOString(),
+      };
+      if (config.type === "practice") body.practiceTestNumber = config.testNumber;
+      else body.topicId = config.topicId;
+      const res = await fetch(`${API_URL}/tests/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      setResult(data);
+      setSubmitted(true);
+    } catch {
+      alert("Илгээхэд алдаа гарлаа. Дахин оролдоно уу.");
+    }
+    setSubmitting(false);
+  };
+
+  const diffLabel = (d) => d === "easy" ? "Easy" : d === "medium" ? "Medium" : "Hard";
+
+  if (loading) return (
+    <div style={{ textAlign: "center", padding: "100px 0", color: T.textSec }}>
+      <div style={{ width: 40, height: 40, border: `3px solid ${T.border}`, borderTopColor: T.primary, borderRadius: "50%", margin: "0 auto 20px", animation: "spin 0.8s linear infinite" }} />
+      Асуултуудыг ачааллаж байна...
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+
+  if (error || questions.length === 0) return (
+    <div style={{ textAlign: "center", padding: "100px 0" }}>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>😔</div>
+      <div style={{ fontSize: 18, fontWeight: 600 }}>{error || "Асуулт олдсонгүй"}</div>
+      <div style={{ fontSize: 14, color: T.textSec, marginTop: 8 }}>Энэ тест дээр одоогоор асуулт бэлэн болоогүй байна.</div>
+      <button onClick={onBack} style={{ ...S.btn("outline"), marginTop: 24 }}>← Буцах</button>
+    </div>
+  );
+
+  if (submitted && result) {
+    const res = result.result || result;
+    const correct = res.correctCount ?? 0;
+    const total = questions.length;
+    const pct = Math.round((correct / total) * 100);
+    const satScore = res.satScore;
+    return (
+      <div style={{ maxWidth: 680, margin: "0 auto" }}>
+        <div style={{ ...S.card, textAlign: "center", padding: "48px 40px", marginBottom: 32, background: `linear-gradient(135deg, ${T.primaryLight}, ${T.card})` }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>{pct >= 80 ? "🎉" : pct >= 60 ? "👍" : "📚"}</div>
+          <div style={{ fontSize: 26, fontWeight: 700 }}>Тест дууслаа!</div>
+          {satScore ? (
+            <>
+              <div style={{ fontSize: 52, fontWeight: 800, color: T.primary, marginTop: 16, letterSpacing: "-2px" }}>{satScore}</div>
+              <div style={{ fontSize: 14, color: T.textSec, marginTop: 4 }}>SAT оноо / 1600</div>
+              {res.mathScore && res.rwScore && (
+                <div style={{ display: "flex", justifyContent: "center", gap: 24, marginTop: 16 }}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: T.primary }}>{res.mathScore}</div>
+                    <div style={{ fontSize: 12, color: T.textSec }}>Math</div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: T.primary }}>{res.rwScore}</div>
+                    <div style={{ fontSize: 12, color: T.textSec }}>Reading & Writing</div>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ fontSize: 40, fontWeight: 800, color: T.primary, marginTop: 16 }}>{correct}/{total}</div>
+          )}
+          <div style={{ display: "flex", justifyContent: "center", gap: 24, marginTop: 20 }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{pct}%</div>
+              <div style={{ fontSize: 12, color: T.textSec }}>Оноо</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{formatTime(elapsed)}</div>
+              <div style={{ fontSize: 12, color: T.textSec }}>Хугацаа</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{correct}</div>
+              <div style={{ fontSize: 12, color: T.textSec }}>Зөв хариулт</div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Хариулт шалгах</div>
+        {questions.map((q, i) => {
+          const sel = answers[q._id];
+          const isCorrect = sel === q.correctAnswer;
+          return (
+            <div key={q._id} style={{ ...S.card, marginBottom: 12, borderColor: isCorrect ? T.success : sel ? T.danger : T.border, borderWidth: 2 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, background: isCorrect ? T.successLight : sel ? T.dangerLight : T.bg, color: isCorrect ? T.success : sel ? T.danger : T.textSec }}>
+                  {i + 1}
+                </div>
+                <div style={{ fontSize: 14, lineHeight: 1.6 }}>{q.questionText}</div>
+              </div>
+              {q.passage && (
+                <div style={{ marginLeft: 40, marginBottom: 10, fontSize: 13, color: T.textSec, background: T.bg, padding: "10px 14px", borderRadius: 8, lineHeight: 1.7, borderLeft: `3px solid ${T.border}`, maxHeight: 120, overflowY: "auto" }}>{q.passage}</div>
+              )}
+              <div style={{ display: "flex", gap: 10, fontSize: 13, marginLeft: 40, marginBottom: sel ? 8 : 0 }}>
+                {sel && <span style={{ color: isCorrect ? T.success : T.danger, fontWeight: 700 }}>Таны хариулт: {sel}</span>}
+                {!isCorrect && <span style={{ color: T.success, fontWeight: 700 }}>Зөв хариулт: {q.correctAnswer}</span>}
+              </div>
+              {q.explanation && (
+                <div style={{ marginLeft: 40, fontSize: 13, color: T.textSec, background: T.bg, padding: "8px 12px", borderRadius: 8, lineHeight: 1.6 }}>{q.explanation}</div>
+              )}
+            </div>
+          );
+        })}
+
+        <div style={{ display: "flex", gap: 12, marginTop: 24, justifyContent: "center", paddingBottom: 40 }}>
+          <button onClick={onBack} style={S.btn("outline")}>← Буцах</button>
+          <button onClick={() => { setSubmitted(false); setResult(null); setAnswers({}); setCurrentIdx(0); setElapsed(0); }} style={S.btn()}>Дахин өгөх</button>
+        </div>
+      </div>
+    );
+  }
+
+  const q = questions[currentIdx];
+  const answered = Object.keys(answers).length;
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, position: "sticky", top: 0, background: T.bg, padding: "12px 0", zIndex: 10, borderBottom: `1px solid ${T.border}` }}>
+        <button onClick={() => { if (window.confirm("Тестийг орхих уу? Явц хадгалагдахгүй.")) onBack(); }} style={S.btn("outline")}>← Гарах</button>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>{config.title || "Тест"}</div>
+          <div style={{ fontSize: 12, color: T.textSec }}>{answered}/{questions.length} хариулсан</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "8px 16px" }}>
+          <Icon name="clock" size={16} color={T.primary} />
+          <span style={{ fontWeight: 700, fontSize: 16, color: T.primary, fontFamily: "monospace" }}>{formatTime(elapsed)}</span>
+        </div>
+      </div>
+
+      <ProgressBar pct={(answered / questions.length) * 100} height={4} />
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 210px", gap: 24, marginTop: 24, alignItems: "start" }}>
+        {/* Question card */}
+        <div style={S.card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: T.primary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Асуулт {currentIdx + 1} / {questions.length}</span>
+            {q.difficulty && <span style={S.tag(diffBg(diffLabel(q.difficulty)), diffColor(diffLabel(q.difficulty)))}>{q.difficulty}</span>}
+          </div>
+          {q.passage && (
+            <div style={{ background: T.bg, borderRadius: 12, padding: 16, marginBottom: 20, fontSize: 14, lineHeight: 1.8, maxHeight: 200, overflowY: "auto", borderLeft: `3px solid ${T.primary}` }}>
+              {q.passage}
+            </div>
+          )}
+          <div style={{ fontSize: 16, lineHeight: 1.7, marginBottom: 24 }}>{q.questionText}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {q.options.map((opt) => {
+              const selected = answers[q._id] === opt.label;
+              return (
+                <button key={opt.label} onClick={() => setAnswers(prev => ({ ...prev, [q._id]: opt.label }))}
+                  style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "14px 18px", borderRadius: 12, border: `2px solid ${selected ? T.primary : T.border}`, background: selected ? T.primaryLight : T.bg, cursor: "pointer", textAlign: "left", fontFamily: "inherit", transition: "all 0.15s", width: "100%" }}>
+                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: selected ? T.primary : T.card, border: `2px solid ${selected ? T.primary : T.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: selected ? "#fff" : T.textSec, flexShrink: 0 }}>
+                    {opt.label}
+                  </div>
+                  <span style={{ fontSize: 15, lineHeight: 1.5, color: T.text, paddingTop: 3 }}>{opt.text}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24 }}>
+            <button onClick={() => setCurrentIdx(i => Math.max(0, i - 1))} disabled={currentIdx === 0} style={{ ...S.btn("outline"), opacity: currentIdx === 0 ? 0.4 : 1 }}>← Өмнөх</button>
+            <button onClick={() => setCurrentIdx(i => Math.min(questions.length - 1, i + 1))} disabled={currentIdx === questions.length - 1} style={{ ...S.btn(), opacity: currentIdx === questions.length - 1 ? 0.4 : 1 }}>Дараах →</button>
+          </div>
+        </div>
+
+        {/* Sidebar navigator */}
+        <div style={{ ...S.card, position: "sticky", top: 80 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.textSec, letterSpacing: "0.5px", marginBottom: 12 }}>АСУУЛТУУД</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 5 }}>
+            {questions.map((qq, i) => {
+              const isAnswered = !!answers[qq._id];
+              const isCurrent = i === currentIdx;
+              return (
+                <button key={i} onClick={() => setCurrentIdx(i)} style={{ aspectRatio: "1", borderRadius: 8, border: `2px solid ${isCurrent ? T.primary : isAnswered ? T.success : T.border}`, background: isCurrent ? T.primary : isAnswered ? T.successLight : T.bg, color: isCurrent ? "#fff" : isAnswered ? T.success : T.textSec, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                  {i + 1}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: T.textSec }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: T.successLight, border: `1.5px solid ${T.success}` }} /> Хариулсан</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: T.primary }} /> Одоогийн</div>
+          </div>
+          <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+            {answered === questions.length ? (
+              <button onClick={() => { if (window.confirm(`${answered}/${questions.length} асуулт хариуллаа. Илгээх үү?`)) handleSubmit(); }} disabled={submitting} style={{ ...S.btn("accent"), width: "100%", opacity: submitting ? 0.7 : 1 }}>
+                {submitting ? "Илгээж байна..." : "Илгээх ✓"}
+              </button>
+            ) : (
+              <button onClick={() => { if (window.confirm(`${questions.length - answered} асуулт хариулаагүй байна. Гэсэн ч илгээх үү?`)) handleSubmit(); }} disabled={submitting} style={{ ...S.btn("outline"), width: "100%", fontSize: 13, opacity: submitting ? 0.7 : 1 }}>
+                {submitting ? "Илгээж байна..." : `Илгээх (${answered}/${questions.length})`}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ─── MAIN APP ─── */
 export default function App() {
   const [page, setPage] = useState("home");
@@ -1350,9 +1688,16 @@ export default function App() {
     setAuthPage("login");
   };
 
+  const [testConfig, setTestConfig] = useState(null);
+
   const navigate = (p) => {
     setAnimating(true);
     setTimeout(() => { setPage(p); setAnimating(false); }, 200);
+  };
+
+  const startTest = (config) => {
+    setTestConfig(config);
+    navigate("testRunner");
   };
 
   // Auth шалгаж дуусаагүй бол хүлээх
@@ -1393,27 +1738,27 @@ export default function App() {
   // ─── Нэвтэрсэн хэрэглэгчийн хуудас (хуучин кодтой ижил) ───
   const navItems = [
     { id: "home", label: "Нүүр хуудас", icon: "home" },
-    { id: "lessons", label: "Хичээлүүд", icon: "book" },
+    { id: "lessons", label: "Видео хичээл", icon: "book" },
     { id: "practice", label: "Practice Test", icon: "test" },
     { id: "topics", label: "Сэдэвчилсэн тест", icon: "topic" },
     { id: "flashcards", label: "Flashcards", icon: "flash" },
     { id: "news", label: "Мэдээ", icon: "news" },
     { id: "profile", label: "Миний бүртгэл", icon: "user" },
     ...(user && user.role === "admin" ? [{ id: "admin", label: "Admin Panel", icon: "settings" }] : []),
-    
   ];
 
   const renderPage = () => {
     switch (page) {
       case "home": return <HomePage navigate={navigate} />;
-      case "lessons": return <LessonsPage />;
-      case "practice": return <PracticeTestPage />;
-      case "topics": return <TopicTestsPage />;
+      case "lessons": return <VideosPage />;
+      case "practice": return <PracticeTestPage onStartTest={startTest} />;
+      case "topics": return <TopicTestsPage onStartTest={startTest} />;
       case "flashcards": return <FlashcardsPage />;
       case "news": return <NewsPage />;
       case "profile": return <ProfilePage />;
       case "admin": return <AdminPanel />;
-      default: return <HomePage />;
+      case "testRunner": return <TestRunnerPage config={testConfig} onBack={() => navigate(testConfig?.type === "practice" ? "practice" : "topics")} />;
+      default: return <HomePage navigate={navigate} />;
     }
   };
 
