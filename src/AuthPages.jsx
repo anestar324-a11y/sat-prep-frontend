@@ -13,7 +13,7 @@ const T = {
 const API_URL = "https://sat-prep-backend.onrender.com/api";
 
 // ─── LOGIN PAGE ───
-export const LoginPage = ({ onLogin, onSwitch }) => {
+export const LoginPage = ({ onLogin, onSwitch, onForgot }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -99,6 +99,10 @@ export const LoginPage = ({ onLogin, onSwitch }) => {
                 style={styles.input}
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               />
+            </div>
+
+            <div style={{ textAlign: "right", marginTop: 4, marginBottom: 4 }}>
+              <span onClick={onForgot} style={{ ...styles.switchLink, fontSize: 13 }}>Нууц үг мартсан уу?</span>
             </div>
 
             <button onClick={handleLogin} disabled={loading} style={{
@@ -250,6 +254,155 @@ export const RegisterPage = ({ onRegister, onSwitch }) => {
             <div style={styles.switchText}>
               Бүртгэлтэй юу?{" "}
               <span onClick={onSwitch} style={styles.switchLink}>Нэвтрэх</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── FORGOT PASSWORD PAGE ───
+export const ForgotPasswordPage = ({ onBack }) => {
+  const [step, setStep] = useState(1); // 1: email, 2: code + new password
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSendCode = async () => {
+    setError(""); setSuccess("");
+    if (!email) { setError("Имэйл хаяг оруулна уу"); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setSuccess(data.message || "Ресет код таны имэйл рүү илгээгдлээ.");
+      setStep(2);
+    } catch (err) {
+      setError(err.message || "Алдаа гарлаа");
+    }
+    setLoading(false);
+  };
+
+  const handleResetPassword = async () => {
+    setError(""); setSuccess("");
+    if (!code) { setError("Ресет код оруулна уу"); return; }
+    if (!newPassword || newPassword.length < 6) { setError("Нууц үг хамгийн багадаа 6 тэмдэгт байх ёстой"); return; }
+    if (newPassword !== confirmPassword) { setError("Нууц үг таарахгүй байна"); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setSuccess("Нууц үг амжилттай солигдлоо! Одоо нэвтэрч болно.");
+      setTimeout(() => onBack(), 2000);
+    } catch (err) {
+      setError(err.message || "Алдаа гарлаа");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={styles.wrapper}>
+      <div style={styles.container}>
+        {/* Left - Branding */}
+        <div style={styles.brandSide}>
+          <div style={styles.brandContent}>
+            <div style={styles.logoBox}>S</div>
+            <h1 style={styles.brandTitle}>SATPrep</h1>
+            <p style={styles.brandSub}>SAT DINO PREP</p>
+            <div style={styles.brandDesc}>
+              Нууц үгээ мартсан тохиолдолд имэйлээ оруулж ресет код авна уу.
+            </div>
+          </div>
+        </div>
+
+        {/* Right - Form */}
+        <div style={styles.formSide}>
+          <div style={styles.formContent}>
+            <h2 style={styles.formTitle}>Нууц үг сэргээх</h2>
+            <p style={styles.formSubtitle}>
+              {step === 1 ? "Бүртгэлтэй имэйл хаягаа оруулна уу." : "Имэйлд ирсэн кодыг болон шинэ нууц үгээ оруулна уу."}
+            </p>
+
+            {error && <div style={styles.errorBox}>{error}</div>}
+            {success && (
+              <div style={{ ...styles.errorBox, background: "#F0FDF4", color: "#16A34A", border: "1px solid #BBF7D0" }}>
+                {success}
+              </div>
+            )}
+
+            {step === 1 ? (
+              <>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Имэйл хаяг</label>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    style={styles.input}
+                    onKeyDown={(e) => e.key === "Enter" && handleSendCode()}
+                  />
+                </div>
+                <button onClick={handleSendCode} disabled={loading} style={{ ...styles.primaryBtn, opacity: loading ? 0.7 : 1 }}>
+                  {loading ? "Илгээж байна..." : "Ресет код авах"}
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Ресет код (имэйлд ирсэн)</label>
+                  <input
+                    type="text"
+                    placeholder="6 оронтой код"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    style={styles.input}
+                  />
+                </div>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Шинэ нууц үг</label>
+                  <input
+                    type="password"
+                    placeholder="••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    style={styles.input}
+                  />
+                </div>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Нууц үг давтах</label>
+                  <input
+                    type="password"
+                    placeholder="••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    style={styles.input}
+                    onKeyDown={(e) => e.key === "Enter" && handleResetPassword()}
+                  />
+                </div>
+                <button onClick={handleResetPassword} disabled={loading} style={{ ...styles.primaryBtn, opacity: loading ? 0.7 : 1 }}>
+                  {loading ? "Солиж байна..." : "Нууц үг солих"}
+                </button>
+              </>
+            )}
+
+            <div style={styles.switchText}>
+              <span onClick={onBack} style={styles.switchLink}>← Нэвтрэх хуудас руу буцах</span>
             </div>
           </div>
         </div>

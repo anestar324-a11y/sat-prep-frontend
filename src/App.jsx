@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { LoginPage, RegisterPage } from "./AuthPages";
+import { LoginPage, RegisterPage, ForgotPasswordPage } from "./AuthPages";
 import AdminPanel from "./AdminPanel";
 const API_URL = "https://sat-prep-backend.onrender.com/api"
 /* ─── colour tokens ─── */
@@ -231,7 +231,7 @@ const S = {
     fontWeight: active ? 600 : 500, fontSize: 15, borderRight: active ? `3px solid ${T.primary}` : "3px solid transparent",
     transition: "all 0.2s ease",
   }),
-  main: { flex: 1, marginLeft: 260, padding: "32px 40px", maxWidth: 1200 },
+  main: { flex: 1, marginLeft: 260, padding: "32px 40px", minWidth: 0, overflow: "hidden" },
   topBar: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 },
   greeting: { fontSize: 32, fontWeight: 700, letterSpacing: "-0.5px", lineHeight: 1.2 },
   subGreeting: { color: T.textSec, fontSize: 15, marginTop: 6 },
@@ -1114,7 +1114,7 @@ export default function App() {
 
   // ─── AUTH STATE ───
   const [user, setUser] = useState(null);
-  const [authPage, setAuthPage] = useState("login"); // "login" эсвэл "register"
+  const [authPage, setAuthPage] = useState("login"); // "login", "register", "forgot"
   const [authChecked, setAuthChecked] = useState(false);
 
   // Хуудас ачаалахад token шалгах
@@ -1180,9 +1180,11 @@ export default function App() {
       <>
         <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
         {authPage === "login" ? (
-          <LoginPage onLogin={handleLogin} onSwitch={() => setAuthPage("register")} />
-        ) : (
+          <LoginPage onLogin={handleLogin} onSwitch={() => setAuthPage("register")} onForgot={() => setAuthPage("forgot")} />
+        ) : authPage === "register" ? (
           <RegisterPage onRegister={handleRegister} onSwitch={() => setAuthPage("login")} />
+        ) : (
+          <ForgotPasswordPage onBack={() => setAuthPage("login")} />
         )}
       </>
     );
