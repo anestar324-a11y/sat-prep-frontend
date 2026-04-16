@@ -1727,8 +1727,68 @@ const TestRunnerPage = ({ config, onBack }) => {
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [flagged, setFlagged] = useState({});
+  const [notes, setNotes] = useState({});
+  const [showNote, setShowNote] = useState(false);
+  const [eliminated, setEliminated] = useState({});
+  const [elimMode, setElimMode] = useState(false);
+  const [showCalc, setShowCalc] = useState(false);
+  const [calcDisplay, setCalcDisplay] = useState("0");
+  const [calcPrev, setCalcPrev] = useState(null);
+  const [calcOp, setCalcOp] = useState(null);
+  const [calcNewNum, setCalcNewNum] = useState(true);
+  const [highlights, setHighlights] = useState({});
+  const [highlightMode, setHighlightMode] = useState(false);
 
   const token = localStorage.getItem("sat_token");
+
+  const handleHighlight = (qId) => {
+    if (!highlightMode) return;
+    const sel = window.getSelection();
+    const txt = sel?.toString().trim();
+    if (txt && txt.length >= 2) {
+      setHighlights(prev => ({ ...prev, [qId]: [...(prev[qId] || []), txt] }));
+      sel.removeAllRanges();
+    }
+  };
+
+  const renderHL = (text, qId) => {
+    const hs = highlights[qId] || [];
+    if (!hs.length || !text) return text;
+    const all = [];
+    hs.forEach(h => { let i = 0; while ((i = text.indexOf(h, i)) !== -1) { all.push({ s: i, e: i + h.length }); i += h.length; } });
+    all.sort((a, b) => a.s - b.s);
+    const parts = []; let pos = 0;
+    all.forEach(({ s, e }) => {
+      if (s >= pos) {
+        if (s > pos) parts.push(text.slice(pos, s));
+        parts.push(<mark key={s} style={{ background: "#FFE066", borderRadius: 2, padding: "0 1px" }}>{text.slice(s, e)}</mark>);
+        pos = e;
+      }
+    });
+    if (pos < text.length) parts.push(text.slice(pos));
+    return parts.length ? parts : text;
+  };
+
+  const calcPress = (key) => {
+    if (key === "C") { setCalcDisplay("0"); setCalcPrev(null); setCalcOp(null); setCalcNewNum(true); return; }
+    if (key === "⌫") { setCalcDisplay(d => d.length > 1 ? d.slice(0, -1) : "0"); return; }
+    if (["+", "−", "×", "÷"].includes(key)) { setCalcPrev(parseFloat(calcDisplay) || 0); setCalcOp(key); setCalcNewNum(true); return; }
+    if (key === "=") {
+      if (calcPrev !== null && calcOp) {
+        const a = calcPrev, b = parseFloat(calcDisplay) || 0;
+        const r = { "+": a + b, "−": a - b, "×": a * b, "÷": b ? a / b : NaN }[calcOp];
+        setCalcDisplay(isNaN(r) ? "Error" : String(+r.toFixed(10)));
+        setCalcPrev(null); setCalcOp(null); setCalcNewNum(true);
+      }
+      return;
+    }
+    if (key === ".") { setCalcDisplay(calcNewNum ? "0." : calcDisplay.includes(".") ? calcDisplay : calcDisplay + "."); setCalcNewNum(false); return; }
+    if (key === "±") { setCalcDisplay(String(-parseFloat(calcDisplay))); return; }
+    if (key === "%") { setCalcDisplay(String(parseFloat(calcDisplay) / 100)); return; }
+    setCalcDisplay(calcNewNum ? key : calcDisplay === "0" ? key : calcDisplay.length < 14 ? calcDisplay + key : calcDisplay);
+    setCalcNewNum(false);
+  };
 
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -1918,7 +1978,27 @@ const TestRunnerPage = ({ config, onBack }) => {
 
       <ProgressBar pct={(answered / questions.length) * 100} height={4} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 210px", gap: 24, marginTop: 24, alignItems: "start" }}>
+      {/* Bluebook Toolbar */}
+      <div style={{ display: "flex", gap: 6, padding: "10px 0", flexWrap: "wrap" }}>
+        {[
+          { label: flagged[q._id] ? "Тэмдэглэсэн ✓" : "Тэмдэглэх", icon: "🚩", active: !!flagged[q._id], action: () => setFlagged(p => ({ ...p, [q._id]: !p[q._id] })) },
+          { label: highlightMode ? "Highlight ✓" : "Highlight", icon: "✏️", active: highlightMode, action: () => setHighlightMode(m => !m) },
+          { label: showNote ? "Тэмдэглэл ✓" : "Тэмдэглэл", icon: "📝", active: showNote, action: () => setShowNote(s => !s) },
+          { label: elimMode ? "Хасах горим ✓" : "Хариулт хасах", icon: "✗", active: elimMode, action: () => setElimMode(m => !m) },
+          { label: "Тооны машин", icon: "🧮", active: showCalc, action: () => setShowCalc(s => !s) },
+        ].map(({ label, icon, active, action }) => (
+          <button key={label} onClick={action} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 13px", borderRadius: 10, border: `1.5px solid ${active ? T.primary : T.border}`, background: active ? T.primaryLight : T.card, color: active ? T.primary : T.textSec, fontSize: 12, fontWeight: active ? 700 : 500, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
+            <span style={{ fontSize: 14 }}>{icon}</span> {label}
+          </button>
+        ))}
+        {highlightMode && highlights[q._id]?.length > 0 && (
+          <button onClick={() => setHighlights(p => ({ ...p, [q._id]: [] }))} style={{ padding: "6px 13px", borderRadius: 10, border: `1.5px solid ${T.border}`, background: T.bg, color: T.danger, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+            Highlight арилгах
+          </button>
+        )}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 210px", gap: 24, marginTop: 8, alignItems: "start" }}>
         {/* Question card */}
         <div style={S.card}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -1926,8 +2006,8 @@ const TestRunnerPage = ({ config, onBack }) => {
             {q.difficulty && <span style={S.tag(diffBg(diffLabel(q.difficulty)), diffColor(diffLabel(q.difficulty)))}>{q.difficulty}</span>}
           </div>
           {q.passage && (
-            <div style={{ background: T.bg, borderRadius: 12, padding: 16, marginBottom: 20, fontSize: 14, lineHeight: 1.8, maxHeight: 200, overflowY: "auto", borderLeft: `3px solid ${T.primary}` }}>
-              {q.passage}
+            <div onMouseUp={() => handleHighlight(q._id)} style={{ background: T.bg, borderRadius: 12, padding: 16, marginBottom: 20, fontSize: 14, lineHeight: 1.8, maxHeight: 200, overflowY: "auto", borderLeft: `3px solid ${T.primary}`, cursor: highlightMode ? "text" : "auto", userSelect: highlightMode ? "text" : "auto" }}>
+              {renderHL(q.passage, q._id)}
             </div>
           )}
           {q.imageUrl && (
@@ -1935,17 +2015,38 @@ const TestRunnerPage = ({ config, onBack }) => {
               <img src={q.imageUrl} alt="Question" style={{ width: "100%", maxHeight: 320, objectFit: "contain", background: T.bg }} />
             </div>
           )}
-          <div style={{ fontSize: 16, lineHeight: 1.7, marginBottom: 24 }}>{q.questionText}</div>
+          <div onMouseUp={() => handleHighlight(q._id)} style={{ fontSize: 16, lineHeight: 1.7, marginBottom: 12, cursor: highlightMode ? "text" : "auto", userSelect: highlightMode ? "text" : "auto" }}>{renderHL(q.questionText, q._id)}</div>
+          {showNote && (
+            <textarea
+              value={notes[q._id] || ""}
+              onChange={e => setNotes(prev => ({ ...prev, [q._id]: e.target.value }))}
+              placeholder="📝 Тэмдэглэл бичнэ үү..."
+              style={{ width: "100%", minHeight: 72, padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${T.primary}55`, background: T.accentLight, color: T.text, fontSize: 13, fontFamily: "inherit", resize: "vertical", outline: "none", marginBottom: 16, boxSizing: "border-box" }}
+            />
+          )}
+          {!showNote && <div style={{ marginBottom: 12 }} />}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {elimMode && (
+              <div style={{ fontSize: 12, color: T.danger, marginBottom: 8, fontWeight: 600 }}>
+                ✗ Хасах горим идэвхтэй — хасах хариулт дээр дарна уу
+              </div>
+            )}
             {(q.options || []).map((opt) => {
               const selected = answers[q._id] === opt.label;
+              const isElim = (eliminated[q._id] || {})[opt.label];
               return (
-                <button key={opt.label} onClick={() => setAnswers(prev => ({ ...prev, [q._id]: opt.label }))}
-                  style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "14px 18px", borderRadius: 12, border: `2px solid ${selected ? T.primary : T.border}`, background: selected ? T.primaryLight : T.bg, cursor: "pointer", textAlign: "left", fontFamily: "inherit", transition: "all 0.15s", width: "100%" }}>
-                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: selected ? T.primary : T.card, border: `2px solid ${selected ? T.primary : T.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: selected ? "#fff" : T.textSec, flexShrink: 0 }}>
+                <button key={opt.label} onClick={() => {
+                  if (elimMode) {
+                    setEliminated(prev => ({ ...prev, [q._id]: { ...(prev[q._id] || {}), [opt.label]: !(prev[q._id] || {})[opt.label] } }));
+                  } else {
+                    setAnswers(prev => ({ ...prev, [q._id]: opt.label }));
+                  }
+                }}
+                  style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "14px 18px", borderRadius: 12, border: `2px solid ${elimMode ? T.danger + "44" : selected ? T.primary : T.border}`, background: selected && !elimMode ? T.primaryLight : T.bg, cursor: "pointer", textAlign: "left", fontFamily: "inherit", transition: "all 0.15s", width: "100%", opacity: isElim ? 0.4 : 1 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: selected ? T.primary : T.card, border: `2px solid ${selected ? T.primary : isElim ? T.danger : T.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: selected ? "#fff" : T.textSec, flexShrink: 0, textDecoration: isElim ? "line-through" : "none" }}>
                     {opt.label}
                   </div>
-                  <span style={{ fontSize: 15, lineHeight: 1.5, color: T.text, paddingTop: 3 }}>{opt.text}</span>
+                  <span style={{ fontSize: 15, lineHeight: 1.5, color: T.text, paddingTop: 3, textDecoration: isElim ? "line-through" : "none" }}>{opt.text}</span>
                 </button>
               );
             })}
@@ -1964,8 +2065,9 @@ const TestRunnerPage = ({ config, onBack }) => {
               const isAnswered = !!answers[qq._id];
               const isCurrent = i === currentIdx;
               return (
-                <button key={i} onClick={() => setCurrentIdx(i)} style={{ aspectRatio: "1", borderRadius: 8, border: `2px solid ${isCurrent ? T.primary : isAnswered ? T.success : T.border}`, background: isCurrent ? T.primary : isAnswered ? T.successLight : T.bg, color: isCurrent ? "#fff" : isAnswered ? T.success : T.textSec, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                <button key={i} onClick={() => setCurrentIdx(i)} style={{ aspectRatio: "1", borderRadius: 8, border: `2px solid ${isCurrent ? T.primary : isAnswered ? T.success : flagged[qq._id] ? T.danger : T.border}`, background: isCurrent ? T.primary : isAnswered ? T.successLight : flagged[qq._id] ? T.dangerLight : T.bg, color: isCurrent ? "#fff" : isAnswered ? T.success : flagged[qq._id] ? T.danger : T.textSec, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", position: "relative" }}>
                   {i + 1}
+                  {flagged[qq._id] && <span style={{ position: "absolute", top: -4, right: -3, fontSize: 9 }}>🚩</span>}
                 </button>
               );
             })}
@@ -1973,6 +2075,7 @@ const TestRunnerPage = ({ config, onBack }) => {
           <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: T.textSec }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: T.successLight, border: `1.5px solid ${T.success}` }} /> Хариулсан</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: T.primary }} /> Одоогийн</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: T.dangerLight, border: `1.5px solid ${T.danger}` }} /> Тэмдэглэсэн</div>
           </div>
           <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
             {answered === questions.length ? (
@@ -1987,6 +2090,32 @@ const TestRunnerPage = ({ config, onBack }) => {
           </div>
         </div>
       </div>
+
+      {/* Floating Calculator */}
+      {showCalc && (
+        <div style={{ position: "fixed", bottom: 24, right: 24, width: 260, background: "#1C1C1E", borderRadius: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.45)", overflow: "hidden", zIndex: 1000 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px 8px" }}>
+            <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>🧮 Тооны машин</span>
+            <button onClick={() => setShowCalc(false)} style={{ background: "none", border: "none", color: "#8E8E93", cursor: "pointer", fontSize: 20, lineHeight: 1, padding: 0 }}>×</button>
+          </div>
+          <div style={{ padding: "2px 16px 0", color: "#8E8E93", fontSize: 12, minHeight: 18, textAlign: "right" }}>{calcOp ? `${calcPrev} ${calcOp}` : ""}</div>
+          <div style={{ padding: "4px 16px 12px", textAlign: "right", fontSize: 38, fontWeight: 200, color: "#fff", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{calcDisplay}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, padding: "0 8px 12px" }}>
+            {[
+              { k: "C", bg: "#636366" }, { k: "±", bg: "#636366" }, { k: "%", bg: "#636366" }, { k: "÷", bg: "#FF9F0A" },
+              { k: "7" }, { k: "8" }, { k: "9" }, { k: "×", bg: "#FF9F0A" },
+              { k: "4" }, { k: "5" }, { k: "6" }, { k: "−", bg: "#FF9F0A" },
+              { k: "1" }, { k: "2" }, { k: "3" }, { k: "+", bg: "#FF9F0A" },
+              { k: "⌫" }, { k: "0" }, { k: "." }, { k: "=", bg: "#FF9F0A" },
+            ].map(({ k, bg }) => (
+              <button key={k} onClick={() => calcPress(k)} style={{ padding: "16px 0", margin: 1, borderRadius: 10, border: "none", cursor: "pointer", fontSize: ["+", "−", "×", "÷", "="].includes(k) ? 20 : 16, fontWeight: 400, background: bg || "#2C2C2E", color: "#fff", fontFamily: "monospace", transition: "opacity 0.1s" }}
+                onMouseDown={e => e.currentTarget.style.opacity = "0.7"}
+                onMouseUp={e => e.currentTarget.style.opacity = "1"}
+              >{k}</button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

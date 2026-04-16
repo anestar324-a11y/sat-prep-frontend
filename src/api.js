@@ -227,7 +227,7 @@ export const flashcardsAPI = {
 export const videosAPI = {
   getAll: async (filters = {}) => {
     const params = new URLSearchParams(filters);
-    return await apiFetch(`/videos?${params}`);
+    return await apiFetch(`/videos/admin/all?${params}`);
   },
   create: async (data) => {
     return await apiFetch("/videos", { method: "POST", body: JSON.stringify(data) });
