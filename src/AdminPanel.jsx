@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { newsAPI } from "./api";
+import { newsAPI, videosAPI, questionsAPI, flashcardsAPI } from "./api";
 
 const C = {
   bg: "#0B0E14", surface: "#111620", surfaceHover: "#161C28", card: "#141924",
@@ -45,47 +45,18 @@ const initStudents = [
   { id: 5, name: "Хүслэн Эрдэнэ", email: "khuslen@ex.com", score: 1100, math: 550, verbal: 550, progress: 35, streak: 0, avatar: "ХЭ", status: "inactive", plan: "Basic" },
   { id: 6, name: "Номин Цэцэг", email: "nomin@ex.com", score: 1410, math: 720, verbal: 690, progress: 85, streak: 10, avatar: "НЦ", status: "active", plan: "Premium" },
 ];
-const initLessons = [
-  { id: 1, title: "Algebra Basics", section: "Math", level: "Beginner", videoCount: 5, duration: "45 мин", students: 120, status: "published", desc: "Алгебрийн үндсэн ойлголтууд", youtubeUrls: ["https://youtu.be/dQw4w9WgXcQ", "https://youtu.be/abc123", "https://youtu.be/def456", "https://youtu.be/ghi789", "https://youtu.be/jkl012"] },
-  { id: 2, title: "Advanced Geometry", section: "Math", level: "Advanced", videoCount: 8, duration: "1.5 цаг", students: 78, status: "published", desc: "Геометрийн хүнд даалгаврууд", youtubeUrls: ["https://youtu.be/geo001", "https://youtu.be/geo002"] },
-  { id: 3, title: "Reading Comprehension", section: "Verbal", level: "Intermediate", videoCount: 6, duration: "1 цаг", students: 95, status: "published", desc: "Уншиж ойлгох чадвар", youtubeUrls: ["https://youtu.be/read01"] },
-  { id: 4, title: "Vocabulary Builder", section: "Verbal", level: "Beginner", videoCount: 10, duration: "2 цаг", students: 145, status: "published", desc: "Үгийн сангаа баяжуулах", youtubeUrls: [] },
-  { id: 5, title: "Data Analysis & Statistics", section: "Math", level: "Advanced", videoCount: 4, duration: "50 мин", students: 62, status: "draft", desc: "Статистик, өгөгдлийн шинжилгээ", youtubeUrls: [] },
-];
 
-// Extract YouTube video ID from various URL formats
-const getYouTubeId = (url) => {
-  if (!url) return null;
-  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?\s]{11})/);
-  return m ? m[1] : null;
-};
-const initFlashcards = [
-  { id: 1, deck: "SAT Vocabulary Set 1", category: "Verbal", cardCount: 50, mastered: 35, color: C.accent, emoji: "📚" },
-  { id: 2, deck: "Math Formulas", category: "Math", cardCount: 40, mastered: 28, color: C.success, emoji: "📐" },
-  { id: 3, deck: "Grammar Rules", category: "Verbal", cardCount: 30, mastered: 22, color: C.pink, emoji: "✏️" },
-  { id: 4, deck: "Geometry Theorems", category: "Math", cardCount: 25, mastered: 10, color: C.cyan, emoji: "📏" },
-  { id: 5, deck: "SAT Vocabulary Set 2", category: "Verbal", cardCount: 50, mastered: 12, color: C.warning, emoji: "🔤" },
-  { id: 6, deck: "Problem Solving Tips", category: "Strategy", cardCount: 20, mastered: 18, color: "#9B59B6", emoji: "💡" },
-];
-const initNews = [
-  { id: 1, title: "SAT 2026 шинэ формат зарлагдлаа", excerpt: "College Board SAT шалгалтын шинэ бүтцийг танилцуулав.", date: "2026-04-09", category: "Мэдээ", status: "published", views: 342, image: true },
-  { id: 2, title: "Math хэсгийн шинэ стратеги", excerpt: "Математикийн хэсэгт хурдан бодох 5 арга.", date: "2026-04-07", category: "Зөвлөгөө", status: "published", views: 218, image: false },
-  { id: 3, title: "Амжилтын түүх: 1580 оноо", excerpt: "Манай сурагч Анужин хэрхэн 1580 оноо авсан тухай.", date: "2026-04-05", category: "Амжилт", status: "published", views: 567, image: true },
-  { id: 4, title: "Шинэ Practice Test #10 нэмэгдлээ", excerpt: "Бүрэн хэмжээний шинэ дадлага шалгалт бэлэн боллоо.", date: "2026-04-03", category: "Шинэчлэл", status: "draft", views: 0, image: false },
-];
-const initQuestions = [
-  { id: 1, type: "Math", section: "Algebra", difficulty: "Hard", text: "If 3x + 7 = 22, what is x?", usageCount: 342, correctRate: 67 },
-  { id: 2, type: "Math", section: "Geometry", difficulty: "Medium", text: "Find the area of a circle with radius 5.", usageCount: 521, correctRate: 74 },
-  { id: 3, type: "Verbal", section: "Reading", difficulty: "Hard", text: "What is the main idea of the passage?", usageCount: 289, correctRate: 58 },
-  { id: 4, type: "Verbal", section: "Writing", difficulty: "Easy", text: "Choose the correct punctuation.", usageCount: 612, correctRate: 82 },
-  { id: 5, type: "Math", section: "Statistics", difficulty: "Medium", text: "Calculate the standard deviation.", usageCount: 198, correctRate: 61 },
-  { id: 6, type: "Verbal", section: "Vocabulary", difficulty: "Hard", text: "Select the synonym of 'ubiquitous'.", usageCount: 445, correctRate: 52 },
-];
 const testHistory = [
   { date: "04/01", avgScore: 1280 }, { date: "04/03", avgScore: 1310 }, { date: "04/05", avgScore: 1295 },
   { date: "04/07", avgScore: 1340 }, { date: "04/09", avgScore: 1360 }, { date: "04/11", avgScore: 1325 },
   { date: "04/13", avgScore: 1380 }, { date: "04/15", avgScore: 1395 },
 ];
+
+const getYouTubeId = (url) => {
+  if (!url) return null;
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?\s]{11})/);
+  return m ? m[1] : (url.length === 11 ? url : null);
+};
 
 const MiniChart = ({ data, color, height = 40 }) => {
   const max = Math.max(...data), min = Math.min(...data), range = max - min || 1, w = 120;
@@ -98,6 +69,7 @@ const MiniChart = ({ data, color, height = 40 }) => {
     </svg>
   );
 };
+
 const ScoreChart = ({ data }) => {
   const max = 1600, H = 180, W = 500, pL = 40, pB = 24, uH = H - pB, uW = W - pL;
   return (
@@ -111,24 +83,35 @@ const ScoreChart = ({ data }) => {
     </svg>
   );
 };
+
 const ProgressRing = ({ percent, size = 44, stroke = 4, color = C.accent }) => {
   const r = (size - stroke) / 2, circ = 2 * Math.PI * r, off = circ - (percent / 100) * circ;
   return (<svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}><circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={C.border} strokeWidth={stroke} /><circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeDasharray={circ} strokeDashoffset={off} strokeLinecap="round" style={{ transition: "stroke-dashoffset 0.6s ease" }} /></svg>);
 };
+
 const DiffBadge = ({ level }) => {
-  const m = { Easy: { bg: C.successBg, c: C.success }, Medium: { bg: C.warningBg, c: C.warning }, Hard: { bg: C.dangerBg, c: C.danger }, Beginner: { bg: C.successBg, c: C.success }, Intermediate: { bg: C.warningBg, c: C.warning }, Advanced: { bg: C.dangerBg, c: C.danger } };
-  const s = m[level] || m.Medium;
+  const m = {
+    easy: { bg: C.successBg, c: C.success }, Easy: { bg: C.successBg, c: C.success },
+    medium: { bg: C.warningBg, c: C.warning }, Medium: { bg: C.warningBg, c: C.warning },
+    hard: { bg: C.dangerBg, c: C.danger }, Hard: { bg: C.dangerBg, c: C.danger },
+    beginner: { bg: C.successBg, c: C.success }, Beginner: { bg: C.successBg, c: C.success },
+    intermediate: { bg: C.warningBg, c: C.warning }, Intermediate: { bg: C.warningBg, c: C.warning },
+    advanced: { bg: C.dangerBg, c: C.danger }, Advanced: { bg: C.dangerBg, c: C.danger },
+  };
+  const s = m[level] || { bg: C.border, c: C.textSec };
   return <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: s.bg, color: s.c }}>{level}</span>;
 };
-const Btn = ({ children, onClick, primary, small, style: sx }) => (
-  <button onClick={onClick} style={{ padding: small ? "6px 12px" : "9px 20px", borderRadius: 10, border: primary ? "none" : `1px solid ${C.border}`, cursor: "pointer", background: primary ? `linear-gradient(135deg, ${C.accent}, ${C.accentLight})` : "transparent", color: primary ? "#fff" : C.textSec, fontSize: small ? 12 : 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s", ...sx }}>{children}</button>
+
+const Btn = ({ children, onClick, primary, small, style: sx, disabled }) => (
+  <button onClick={onClick} disabled={disabled} style={{ padding: small ? "6px 12px" : "9px 20px", borderRadius: 10, border: primary ? "none" : `1px solid ${C.border}`, cursor: disabled ? "not-allowed" : "pointer", background: primary ? `linear-gradient(135deg, ${C.accent}, ${C.accentLight})` : "transparent", color: primary ? "#fff" : C.textSec, fontSize: small ? 12 : 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s", opacity: disabled ? 0.6 : 1, ...sx }}>{children}</button>
 );
+
 const InputField = ({ label, value, onChange, type = "text", placeholder, textarea, select, options }) => (
   <div style={{ marginBottom: 16 }}>
     <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.textSec, marginBottom: 6, letterSpacing: 0.3 }}>{label}</label>
     {select ? (
       <select value={value} onChange={e => onChange(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none" }}>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
+        {options.map(o => <option key={o.value !== undefined ? o.value : o} value={o.value !== undefined ? o.value : o}>{o.label !== undefined ? o.label : o}</option>)}
       </select>
     ) : textarea ? (
       <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={4} style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box" }} />
@@ -137,6 +120,7 @@ const InputField = ({ label, value, onChange, type = "text", placeholder, textar
     )}
   </div>
 );
+
 const Modal = ({ open, onClose, title, children, wide }) => {
   if (!open) return null;
   return (
@@ -163,71 +147,175 @@ export default function SATAdminPanel() {
   const [sideOpen, setSideOpen] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [modal, setModal] = useState(null);
-  const [lessons, setLessons] = useState(initLessons);
-  const [flashcards, setFlashcards] = useState(initFlashcards);
-  const [news, setNews] = useState([]);
-  const [newsLoading, setNewsLoading] = useState(false);
   const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const [videos, setVideos] = useState([]);
+  const [questions, setQuestions] = useState([]);
+  const [flashcardDecks, setFlashcardDecks] = useState([]);
+  const [news, setNews] = useState([]);
+  const [loading, setLoading] = useState({ videos: false, questions: false, flashcards: false, news: false });
 
   useEffect(() => { setMounted(true); }, []);
 
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   useEffect(() => {
-    setNewsLoading(true);
-    newsAPI.getAll()
-      .then(data => setNews(data.articles || []))
-      .catch(() => setNews(initNews))
-      .finally(() => setNewsLoading(false));
-  }, []);
+    if (tab === "lessons" && videos.length === 0) {
+      setLoading(l => ({ ...l, videos: true }));
+      videosAPI.getAll().then(d => setVideos(d.videos || [])).catch(() => {}).finally(() => setLoading(l => ({ ...l, videos: false })));
+    }
+    if (tab === "questions" && questions.length === 0) {
+      setLoading(l => ({ ...l, questions: true }));
+      questionsAPI.getAll().then(d => setQuestions(d.questions || [])).catch(() => {}).finally(() => setLoading(l => ({ ...l, questions: false })));
+    }
+    if (tab === "flashcards" && flashcardDecks.length === 0) {
+      setLoading(l => ({ ...l, flashcards: true }));
+      flashcardsAPI.getDecks().then(d => setFlashcardDecks(d.decks || [])).catch(() => {}).finally(() => setLoading(l => ({ ...l, flashcards: false })));
+    }
+    if (tab === "news" && news.length === 0) {
+      setLoading(l => ({ ...l, news: true }));
+      newsAPI.getAll().then(d => setNews(d.articles || [])).catch(() => {}).finally(() => setLoading(l => ({ ...l, news: false })));
+    }
+  }, [tab]);
 
   const openModal = (type, data = null) => {
-    if (type === "lesson") setForm(data ? { ...data, newUrl: "" } : { title: "", section: "Math", level: "Beginner", duration: "", desc: "", videoCount: 0, youtubeUrls: [], newUrl: "" });
-    else if (type === "flashcard") setForm(data ? { ...data } : { deck: "", category: "Verbal", cardCount: 0, emoji: "📚" });
-    else if (type === "news") setForm(data ? { ...data } : { title: "", excerpt: "", category: "Мэдээ", status: "draft" });
+    if (type === "video") {
+      setForm(data ? {
+        ...data,
+        youtubeUrl: data.youtubeId ? `https://youtu.be/${data.youtubeId}` : "",
+      } : {
+        title: "", youtubeUrl: "", section: "math", topic: "", topicName: "",
+        order: 0, duration: 0, difficulty: "beginner", isFree: true, description: "", published: true,
+      });
+    } else if (type === "question") {
+      setForm(data ? { ...data } : {
+        section: "math", topic: "heart-of-algebra", topicName: "Heart of Algebra",
+        difficulty: "medium", questionText: "", passage: "", explanation: "",
+        correctAnswer: "A", practiceTestId: "",
+        options: [{ label: "A", text: "" }, { label: "B", text: "" }, { label: "C", text: "" }, { label: "D", text: "" }],
+      });
+    } else if (type === "flashcard") {
+      setForm({ deckId: "", deckName: "", section: "english", difficulty: "medium", emoji: "📚", front: "", back: "", example: "" });
+    } else if (type === "news") {
+      setForm(data ? {
+        ...data,
+        excerpt: data.summary || data.excerpt || "",
+        status: (data.published || data.status === "published") ? "published" : "draft",
+      } : { title: "", excerpt: "", category: "Мэдээ", status: "draft", pinned: false });
+    }
     setModal({ type, editing: !!data, data });
   };
-  const saveModal = () => {
-    if (modal.type === "lesson") {
-      if (modal.editing) setLessons(ls => ls.map(l => l.id === modal.data.id ? { ...l, ...form } : l));
-      else setLessons(ls => [...ls, { ...form, id: Date.now(), students: 0, status: "draft" }]);
-    } else if (modal.type === "flashcard") {
-      if (modal.editing) setFlashcards(fs => fs.map(f => f.id === modal.data.id ? { ...f, ...form } : f));
-      else setFlashcards(fs => [...fs, { ...form, id: Date.now(), mastered: 0, color: [C.accent, C.success, C.pink, C.cyan, C.warning, "#9B59B6"][Math.floor(Math.random() * 6)] }]);
-    } else if (modal.type === "news") {
-      const payload = {
-        title: form.title,
-        summary: form.excerpt || form.summary || "",
-        category: form.category,
-        categoryLabel: form.category,
-        published: form.status === "published",
-        pinned: form.pinned || false,
-        content: form.content || [],
-      };
-      if (modal.editing) {
-        newsAPI.update(modal.data._id || modal.data.id, payload)
-          .then(data => setNews(ns => ns.map(n => (n._id || n.id) === (modal.data._id || modal.data.id) ? data.article : n)))
-          .catch(err => console.error("Мэдээ засах алдаа:", err));
-      } else {
-        newsAPI.create(payload)
-          .then(data => setNews(ns => [data.article, ...ns]))
-          .catch(err => console.error("Мэдээ нэмэх алдаа:", err));
+
+  const saveModal = async () => {
+    setSaving(true);
+    try {
+      if (modal.type === "video") {
+        const youtubeId = getYouTubeId(form.youtubeUrl) || form.youtubeUrl;
+        const payload = {
+          title: form.title,
+          description: form.description || "",
+          youtubeId,
+          section: form.section,
+          topic: form.topic || form.topicName || form.title,
+          topicName: form.topicName || form.topic || form.title,
+          order: Number(form.order) || 0,
+          duration: Number(form.duration) || 0,
+          difficulty: form.difficulty,
+          isFree: form.isFree !== false,
+          published: form.published !== false,
+        };
+        if (modal.editing) {
+          const d = await videosAPI.update(modal.data._id, payload);
+          setVideos(vs => vs.map(v => v._id === modal.data._id ? d.video : v));
+        } else {
+          const d = await videosAPI.create(payload);
+          setVideos(vs => [d.video, ...vs]);
+        }
+        showToast("Видео хадгалагдлаа!");
+      } else if (modal.type === "question") {
+        const payload = {
+          section: form.section, topic: form.topic, topicName: form.topicName,
+          difficulty: form.difficulty, questionText: form.questionText,
+          passage: form.passage || null, explanation: form.explanation,
+          correctAnswer: form.correctAnswer, options: form.options,
+          practiceTestId: form.practiceTestId ? Number(form.practiceTestId) : null,
+          emoji: form.emoji || "📝",
+        };
+        if (modal.editing) {
+          const d = await questionsAPI.update(modal.data._id, payload);
+          setQuestions(qs => qs.map(q => q._id === modal.data._id ? d.question : q));
+        } else {
+          const d = await questionsAPI.create(payload);
+          setQuestions(qs => [d.question, ...qs]);
+        }
+        showToast("Асуулт хадгалагдлаа!");
+      } else if (modal.type === "flashcard") {
+        const payload = {
+          deckId: form.deckId || form.deckName.toLowerCase().replace(/\s+/g, "-"),
+          deckName: form.deckName, section: form.section, difficulty: form.difficulty,
+          emoji: form.emoji || "📝", front: form.front, back: form.back, example: form.example || null,
+        };
+        await flashcardsAPI.createCard(payload);
+        const d = await flashcardsAPI.getDecks();
+        setFlashcardDecks(d.decks || []);
+        showToast("Карт нэмэгдлээ!");
+      } else if (modal.type === "news") {
+        const payload = {
+          title: form.title, summary: form.excerpt || "",
+          category: form.category, categoryLabel: form.category,
+          published: form.status === "published", pinned: form.pinned || false, content: [],
+        };
+        if (modal.editing) {
+          const d = await newsAPI.update(modal.data._id || modal.data.id, payload);
+          setNews(ns => ns.map(n => (n._id || n.id) === (modal.data._id || modal.data.id) ? d.article : n));
+        } else {
+          const d = await newsAPI.create(payload);
+          setNews(ns => [d.article, ...ns]);
+        }
+        showToast("Мэдээ хадгалагдлаа!");
       }
+      setModal(null);
+    } catch (err) {
+      showToast(err.message || "Алдаа гарлаа", "error");
+    } finally {
+      setSaving(false);
     }
-    setModal(null);
   };
-  const deleteItem = (type, id) => {
-    if (type === "lesson") setLessons(ls => ls.filter(l => l.id !== id));
-    else if (type === "flashcard") setFlashcards(fs => fs.filter(f => f.id !== id));
-    else if (type === "news") {
-      newsAPI.delete(id)
-        .then(() => setNews(ns => ns.filter(n => (n._id || n.id) !== id)))
-        .catch(err => console.error("Мэдээ устгах алдаа:", err));
+
+  const deleteItem = async (type, id) => {
+    if (!window.confirm("Устгах уу?")) return;
+    try {
+      if (type === "video") {
+        await videosAPI.delete(id);
+        setVideos(vs => vs.filter(v => v._id !== id));
+        showToast("Видео устгагдлаа!");
+      } else if (type === "question") {
+        await questionsAPI.delete(id);
+        setQuestions(qs => qs.filter(q => q._id !== id));
+        showToast("Асуулт устгагдлаа!");
+      } else if (type === "flashcardDeck") {
+        await flashcardsAPI.deleteDeck(id);
+        setFlashcardDecks(ds => ds.filter(d => d._id !== id));
+        showToast("Deck устгагдлаа!");
+      } else if (type === "news") {
+        await newsAPI.delete(id);
+        setNews(ns => ns.filter(n => (n._id || n.id) !== id));
+        showToast("Мэдээ устгагдлаа!");
+      }
+    } catch (err) {
+      showToast(err.message || "Устгах алдаа", "error");
     }
   };
 
   const navItems = [
     { id: "dashboard", label: "Хянах самбар", icon: ic.dashboard },
     { id: "students", label: "Сурагчид", icon: ic.students },
-    { id: "lessons", label: "Хичээлүүд", icon: ic.lessons },
+    { id: "lessons", label: "Видео хичээл", icon: ic.lessons },
     { id: "flashcards", label: "Flashcards", icon: ic.flashcards },
     { id: "questions", label: "Асуултууд", icon: ic.questions },
     { id: "tests", label: "Шалгалтууд", icon: ic.tests },
@@ -235,7 +323,7 @@ export default function SATAdminPanel() {
     { id: "analytics", label: "Аналитик", icon: ic.analytics },
     { id: "settings", label: "Тохиргоо", icon: ic.settings },
   ];
-  const tabTitles = { dashboard: "Хянах самбар", students: "Сурагчид", lessons: "Хичээлүүд", flashcards: "Flashcards", questions: "Асуултууд", tests: "Шалгалтууд", news: "Мэдээ оруулах", analytics: "Аналитик", settings: "Тохиргоо" };
+  const tabTitles = { dashboard: "Хянах самбар", students: "Сурагчид", lessons: "Видео хичээлүүд", flashcards: "Flashcards", questions: "Асуултууд", tests: "Шалгалтууд", news: "Мэдээ оруулах", analytics: "Аналитик", settings: "Тохиргоо" };
   const statCards = [
     { label: "Нийт сурагчид", value: "1,284", change: "+12%", icon: ic.students, color: C.accent, data: [40, 42, 38, 45, 50, 48, 52, 55] },
     { label: "Дундаж оноо", value: "1,342", change: "+28", icon: ic.target, color: C.success, data: [1280, 1310, 1295, 1340, 1360, 1325, 1380, 1342] },
@@ -280,26 +368,6 @@ export default function SATAdminPanel() {
           ))}
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <div style={{ background: C.card, borderRadius: 14, padding: 24, border: `1px solid ${C.border}` }}>
-          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Хэсгийн гүйцэтгэл</div>
-          {[{ label: "Algebra", pct: 74, color: C.accent }, { label: "Geometry", pct: 68, color: C.success }, { label: "Reading", pct: 62, color: C.warning }, { label: "Writing", pct: 81, color: C.pink }, { label: "Statistics", pct: 58, color: C.cyan }].map((s, i) => (
-            <div key={i} style={{ marginBottom: 14 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}><span style={{ fontSize: 13, color: C.textSec }}>{s.label}</span><span style={{ fontSize: 13, fontWeight: 600 }}>{s.pct}%</span></div>
-              <div style={{ height: 6, borderRadius: 3, background: C.border }}><div style={{ height: "100%", borderRadius: 3, background: s.color, width: `${s.pct}%`, transition: "width 1s" }} /></div>
-            </div>
-          ))}
-        </div>
-        <div style={{ background: C.card, borderRadius: 14, padding: 24, border: `1px solid ${C.border}` }}>
-          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Сүүлийн үйлдлүүд</div>
-          {[{ a: "Болд шалгалт дуусгав", t: "2 цагийн өмнө", c: C.accent }, { a: "Шинэ хичээл нэмэгдэв", t: "3 цагийн өмнө", c: C.success }, { a: "Анужин 1560 оноо авлаа", t: "5 цагийн өмнө", c: C.warning }, { a: "Flashcard deck шинэчлэгдэв", t: "1 өдрийн өмнө", c: C.pink }, { a: "Шинэ мэдээ нийтлэгдэв", t: "1 өдрийн өмнө", c: C.cyan }].map((x, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: i < 4 ? `1px solid ${C.border}` : "none" }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: x.c }} />
-              <div style={{ flex: 1 }}><div style={{ fontSize: 13 }}>{x.a}</div><div style={{ fontSize: 11, color: C.textMut }}>{x.t}</div></div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 
@@ -307,13 +375,10 @@ export default function SATAdminPanel() {
   const fStudents = initStudents.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
   const renderStudents = () => (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div style={{ fontSize: 12, color: C.textSec }}>{fStudents.length} сурагч</div>
-        <Btn primary><Icon d={ic.plus} size={14} color="#fff" /> Сурагч нэмэх</Btn>
-      </div>
+      <div style={{ fontSize: 12, color: C.textSec, marginBottom: 20 }}>{fStudents.length} сурагч</div>
       <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead><tr style={{ borderBottom: `1px solid ${C.border}` }}>{["Сурагч", "Оноо", "Явц", "Streak", "Төлөвлөгөө", "Төлөв", ""].map(h => <th key={h} style={{ padding: "14px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, color: C.textMut, textTransform: "uppercase", letterSpacing: 0.8 }}>{h}</th>)}</tr></thead>
+          <thead><tr style={{ borderBottom: `1px solid ${C.border}` }}>{["Сурагч", "Оноо", "Явц", "Streak", "Төлөвлөгөө", "Төлөв"].map(h => <th key={h} style={{ padding: "14px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, color: C.textMut, textTransform: "uppercase", letterSpacing: 0.8 }}>{h}</th>)}</tr></thead>
           <tbody>{fStudents.map(s => (
             <tr key={s.id} style={{ borderBottom: `1px solid ${C.border}`, transition: "background 0.15s" }} onMouseEnter={e => e.currentTarget.style.background = C.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
               <td style={{ padding: "12px 16px" }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg,${C.accent}88,${C.accentLight}88)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>{s.avatar}</div><div><div style={{ fontSize: 13, fontWeight: 500 }}>{s.name}</div><div style={{ fontSize: 11, color: C.textMut }}>{s.email}</div></div></div></td>
@@ -322,7 +387,6 @@ export default function SATAdminPanel() {
               <td style={{ padding: "12px 16px" }}><span style={{ color: s.streak > 0 ? C.warning : C.textMut }}>🔥</span> <span style={{ fontSize: 13, fontWeight: 600 }}>{s.streak}</span></td>
               <td style={{ padding: "12px 16px" }}><span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: s.plan === "Premium" ? C.accentGlow : C.border + "66", color: s.plan === "Premium" ? C.accentLight : C.textSec }}>{s.plan}</span></td>
               <td style={{ padding: "12px 16px" }}><div style={{ display: "flex", alignItems: "center", gap: 6 }}><div style={{ width: 7, height: 7, borderRadius: "50%", background: s.status === "active" ? C.success : C.textMut }} /><span style={{ fontSize: 12, color: s.status === "active" ? C.success : C.textMut }}>{s.status === "active" ? "Идэвхтэй" : "Идэвхгүй"}</span></div></td>
-              <td style={{ padding: "12px 16px" }}><div style={{ display: "flex", gap: 6 }}><button style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.edit} size={14} color={C.textSec} /></button><button style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.trash} size={14} color={C.danger} /></button></div></td>
             </tr>
           ))}</tbody>
         </table>
@@ -330,124 +394,123 @@ export default function SATAdminPanel() {
     </div>
   );
 
-  // ── LESSONS ──
-  const fLessons = lessons.filter(l => l.title.toLowerCase().includes(search.toLowerCase()) || l.desc.toLowerCase().includes(search.toLowerCase()));
+  // ── LESSONS (Videos) ──
+  const fVideos = videos.filter(v => (v.title || "").toLowerCase().includes(search.toLowerCase()));
   const renderLessons = () => (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div style={{ display: "flex", gap: 8 }}>{["Бүгд", "Math", "Verbal"].map(f => <button key={f} style={{ padding: "6px 16px", borderRadius: 8, border: `1px solid ${C.border}`, cursor: "pointer", background: f === "Бүгд" ? C.accent + "22" : "transparent", color: f === "Бүгд" ? C.accentLight : C.textSec, fontSize: 12, fontWeight: 500 }}>{f}</button>)}</div>
-        <Btn primary onClick={() => openModal("lesson")}><Icon d={ic.plus} size={14} color="#fff" /> Хичээл нэмэх</Btn>
+        <div style={{ fontSize: 12, color: C.textSec }}>{fVideos.length} видео хичээл</div>
+        <Btn primary onClick={() => openModal("video")}><Icon d={ic.plus} size={14} color="#fff" /> Видео нэмэх</Btn>
       </div>
+      {loading.videos && <div style={{ textAlign: "center", color: C.textSec, padding: 40 }}>Уншиж байна...</div>}
+      {!loading.videos && fVideos.length === 0 && (
+        <div style={{ textAlign: "center", padding: 60 }}>
+          <Icon d={ic.video} size={40} color={C.textMut} />
+          <div style={{ marginTop: 16, fontSize: 16, color: C.textSec }}>Видео хичээл байхгүй байна</div>
+          <div style={{ fontSize: 13, color: C.textMut, marginTop: 4 }}>Дээрх товчийг дарж нэмнэ үү</div>
+        </div>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
-        {fLessons.map(l => {
-          const firstVid = (l.youtubeUrls || []).length > 0 ? getYouTubeId(l.youtubeUrls[0]) : null;
-          const urlCount = (l.youtubeUrls || []).length;
-          return (
-          <div key={l.id} style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, transition: "all 0.2s", overflow: "hidden" }} onMouseEnter={e => hoverCard(e, true)} onMouseLeave={e => hoverCard(e, false)}>
-            {/* YouTube Thumbnail */}
-            {firstVid && (
+        {fVideos.map(v => (
+          <div key={v._id} style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, transition: "all 0.2s", overflow: "hidden" }} onMouseEnter={e => hoverCard(e, true)} onMouseLeave={e => hoverCard(e, false)}>
+            {v.youtubeId && (
               <div style={{ width: "100%", height: 140, background: "#000", position: "relative", overflow: "hidden" }}>
-                <img src={`https://img.youtube.com/vi/${firstVid}/hqdefault.jpg`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }} />
+                <img src={`https://img.youtube.com/vi/${v.youtubeId}/mqdefault.jpg`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }} />
                 <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(255,0,0,0.9)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 12px rgba(0,0,0,0.4)" }}>
+                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(255,0,0,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <div style={{ width: 0, height: 0, borderTop: "8px solid transparent", borderBottom: "8px solid transparent", borderLeft: "14px solid #fff", marginLeft: 3 }} />
                   </div>
                 </div>
-                {urlCount > 1 && (
-                  <div style={{ position: "absolute", top: 8, right: 8, padding: "3px 10px", borderRadius: 6, background: "rgba(0,0,0,0.75)", color: "#fff", fontSize: 11, fontWeight: 600, backdropFilter: "blur(4px)" }}>
-                    {urlCount} видео
-                  </div>
-                )}
-                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 40, background: "linear-gradient(transparent, rgba(0,0,0,0.6))" }} />
               </div>
             )}
             <div style={{ padding: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-              <div style={{ width: 46, height: 46, borderRadius: 12, background: l.section === "Math" ? C.accentGlow : C.successBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{l.section === "Math" ? "📐" : "📖"}</div>
-              <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: l.status === "published" ? C.successBg : C.warningBg, color: l.status === "published" ? C.success : C.warning }}>{l.status === "published" ? "Нийтлэгдсэн" : "Ноорог"}</span>
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{l.title}</div>
-            <div style={{ fontSize: 12, color: C.textSec, marginBottom: 12 }}>{l.desc}</div>
-            <div style={{ display: "flex", gap: 12, fontSize: 11, color: C.textMut, marginBottom: 14, alignItems: "center" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 4, color: urlCount > 0 ? C.danger : C.textMut }}>
-                {urlCount > 0 ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="3" fill="#FF0000"/><polygon points="10,8 16,12 10,16" fill="#fff"/></svg> : <Icon d={ic.video} size={12} color={C.textMut} />}
-                {urlCount > 0 ? `${urlCount} YouTube` : `${l.videoCount} видео`}
-              </span>
-              <span>{l.duration}</span>
-              <DiffBadge level={l.level} />
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 14, borderTop: `1px solid ${C.border}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon d={ic.students} size={14} color={C.textSec} /><span style={{ fontSize: 13, fontWeight: 600 }}>{l.students}</span><span style={{ fontSize: 11, color: C.textMut }}>сурагч</span></div>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => openModal("lesson", l)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.edit} size={14} color={C.textSec} /></button>
-                <button onClick={() => deleteItem("lesson", l.id)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.trash} size={14} color={C.danger} /></button>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, flex: 1, paddingRight: 8 }}>{v.title}</div>
+                <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, flexShrink: 0, background: v.published ? C.successBg : C.warningBg, color: v.published ? C.success : C.warning }}>{v.published ? "Нийтлэгдсэн" : "Ноорог"}</span>
+              </div>
+              <div style={{ fontSize: 12, color: C.textSec, marginBottom: 8 }}>{v.topicName || v.topic} · {v.section}</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14 }}>
+                <DiffBadge level={v.difficulty} />
+                {v.duration > 0 && <span style={{ fontSize: 11, color: C.textMut }}>{v.duration} мин</span>}
+                {v.viewCount > 0 && <span style={{ fontSize: 11, color: C.textMut }}>{v.viewCount} үзэлт</span>}
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+                <button onClick={() => openModal("video", v)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.edit} size={14} color={C.textSec} /></button>
+                <button onClick={() => deleteItem("video", v._id)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.trash} size={14} color={C.danger} /></button>
               </div>
             </div>
-            </div>
           </div>
-          );
-        })}
+        ))}
       </div>
     </div>
   );
 
   // ── FLASHCARDS ──
-  const fFlash = flashcards.filter(f => f.deck.toLowerCase().includes(search.toLowerCase()));
+  const fDecks = flashcardDecks.filter(d => (d.deckName || "").toLowerCase().includes(search.toLowerCase()));
   const renderFlashcards = () => (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div style={{ display: "flex", gap: 12 }}>
-          <div style={{ background: C.card, borderRadius: 10, padding: "10px 18px", border: `1px solid ${C.border}` }}><div style={{ fontSize: 11, color: C.textMut }}>Нийт карт</div><div style={{ fontSize: 20, fontWeight: 700 }}>{flashcards.reduce((a, f) => a + f.cardCount, 0)}</div></div>
-          <div style={{ background: C.card, borderRadius: 10, padding: "10px 18px", border: `1px solid ${C.border}` }}><div style={{ fontSize: 11, color: C.textMut }}>Эзэмшсэн</div><div style={{ fontSize: 20, fontWeight: 700, color: C.success }}>{flashcards.reduce((a, f) => a + f.mastered, 0)}</div></div>
-          <div style={{ background: C.card, borderRadius: 10, padding: "10px 18px", border: `1px solid ${C.border}` }}><div style={{ fontSize: 11, color: C.textMut }}>Deck тоо</div><div style={{ fontSize: 20, fontWeight: 700, color: C.accentLight }}>{flashcards.length}</div></div>
-        </div>
-        <Btn primary onClick={() => openModal("flashcard")}><Icon d={ic.plus} size={14} color="#fff" /> Deck нэмэх</Btn>
+        <div style={{ fontSize: 12, color: C.textSec }}>{fDecks.length} deck · Шинэ карт нэмэхдээ Deck ID давтана уу</div>
+        <Btn primary onClick={() => openModal("flashcard")}><Icon d={ic.plus} size={14} color="#fff" /> Карт нэмэх</Btn>
       </div>
+      {loading.flashcards && <div style={{ textAlign: "center", color: C.textSec, padding: 40 }}>Уншиж байна...</div>}
+      {!loading.flashcards && fDecks.length === 0 && (
+        <div style={{ textAlign: "center", padding: 60 }}>
+          <div style={{ fontSize: 16, color: C.textSec }}>Flashcard deck байхгүй байна</div>
+          <div style={{ fontSize: 13, color: C.textMut, marginTop: 4 }}>Карт нэмэхэд Deck автоматаар үүснэ</div>
+        </div>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
-        {fFlash.map(f => {
-          const pct = f.cardCount > 0 ? Math.round((f.mastered / f.cardCount) * 100) : 0;
-          return (
-            <div key={f.id} style={{ background: C.card, borderRadius: 14, padding: 20, border: `1px solid ${C.border}`, transition: "all 0.2s", position: "relative", overflow: "hidden" }} onMouseEnter={e => hoverCard(e, true)} onMouseLeave={e => hoverCard(e, false)}>
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${f.color}, ${f.color}66)` }} />
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, marginTop: 4 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 12, background: f.color + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{f.emoji}</div>
-                <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: C.border + "66", color: C.textSec }}>{f.category}</span>
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>{f.deck}</div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <span style={{ fontSize: 12, color: C.textSec }}>{f.mastered}/{f.cardCount} эзэмшсэн</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: pct > 70 ? C.success : pct > 40 ? C.warning : C.textSec }}>{pct}%</span>
-              </div>
-              <div style={{ height: 6, borderRadius: 3, background: C.border, marginBottom: 16 }}>
-                <div style={{ height: "100%", borderRadius: 3, background: f.color, width: `${pct}%`, transition: "width 0.8s" }} />
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
-                <Btn small onClick={() => openModal("flashcard", f)}><Icon d={ic.edit} size={13} color={C.textSec} /> Засах</Btn>
-                <button onClick={() => deleteItem("flashcard", f.id)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.trash} size={14} color={C.danger} /></button>
-              </div>
+        {fDecks.map(d => (
+          <div key={d._id} style={{ background: C.card, borderRadius: 14, padding: 20, border: `1px solid ${C.border}`, transition: "all 0.2s" }} onMouseEnter={e => hoverCard(e, true)} onMouseLeave={e => hoverCard(e, false)}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <span style={{ fontSize: 28 }}>{d.emoji || "📚"}</span>
+              <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: C.border + "66", color: C.textSec }}>{d.section}</span>
             </div>
-          );
-        })}
+            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{d.deckName}</div>
+            <div style={{ fontSize: 12, color: C.textMut, marginBottom: 4 }}>ID: <code style={{ background: C.border, padding: "1px 6px", borderRadius: 4, fontSize: 11 }}>{d._id}</code></div>
+            <div style={{ fontSize: 12, color: C.textMut, marginBottom: 12 }}>{d.totalCards} карт · {d.difficulty}</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+              <Btn small onClick={() => openModal("flashcard")}><Icon d={ic.plus} size={13} color={C.textSec} /> Карт нэмэх</Btn>
+              <button onClick={() => deleteItem("flashcardDeck", d._id)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.trash} size={14} color={C.danger} /></button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 
   // ── QUESTIONS ──
-  const fQ = initQuestions.filter(q => q.text.toLowerCase().includes(search.toLowerCase()));
+  const fQ = questions.filter(q => (q.questionText || "").toLowerCase().includes(search.toLowerCase()));
   const renderQuestions = () => (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div style={{ display: "flex", gap: 8 }}>{["Бүгд", "Math", "Verbal"].map(f => <button key={f} style={{ padding: "6px 16px", borderRadius: 8, border: `1px solid ${C.border}`, cursor: "pointer", background: f === "Бүгд" ? C.accent + "22" : "transparent", color: f === "Бүгд" ? C.accentLight : C.textSec, fontSize: 12, fontWeight: 500 }}>{f}</button>)}</div>
-        <Btn primary><Icon d={ic.plus} size={14} color="#fff" /> Асуулт нэмэх</Btn>
+        <div style={{ fontSize: 12, color: C.textSec }}>{fQ.length} асуулт</div>
+        <Btn primary onClick={() => openModal("question")}><Icon d={ic.plus} size={14} color="#fff" /> Асуулт нэмэх</Btn>
       </div>
+      {loading.questions && <div style={{ textAlign: "center", color: C.textSec, padding: 40 }}>Уншиж байна...</div>}
+      {!loading.questions && fQ.length === 0 && (
+        <div style={{ textAlign: "center", padding: 60 }}>
+          <Icon d={ic.questions} size={40} color={C.textMut} />
+          <div style={{ marginTop: 16, fontSize: 16, color: C.textSec }}>Асуулт байхгүй байна</div>
+        </div>
+      )}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {fQ.map(q => (
-          <div key={q.id} style={{ background: C.card, borderRadius: 12, padding: "16px 20px", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 16, transition: "all 0.15s" }} onMouseEnter={e => hoverRow(e, true)} onMouseLeave={e => hoverRow(e, false)}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: q.type === "Math" ? C.accentGlow : C.successBg, fontSize: 16 }}>{q.type === "Math" ? "📐" : "📖"}</div>
-            <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>{q.text}</div><div style={{ display: "flex", gap: 12, fontSize: 11, color: C.textMut }}><span>{q.type} · {q.section}</span><span>Хэрэглэсэн: {q.usageCount}</span></div></div>
-            <div style={{ textAlign: "center", marginRight: 12 }}><div style={{ fontSize: 18, fontWeight: 700, color: q.correctRate > 70 ? C.success : q.correctRate > 55 ? C.warning : C.danger }}>{q.correctRate}%</div><div style={{ fontSize: 10, color: C.textMut }}>Зөв</div></div>
+          <div key={q._id} style={{ background: C.card, borderRadius: 12, padding: "16px 20px", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 16, transition: "all 0.15s" }} onMouseEnter={e => hoverRow(e, true)} onMouseLeave={e => hoverRow(e, false)}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: q.section === "math" ? C.accentGlow : C.successBg, fontSize: 16, flexShrink: 0 }}>{q.section === "math" ? "📐" : "📖"}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.questionText}</div>
+              <div style={{ display: "flex", gap: 12, fontSize: 11, color: C.textMut }}>
+                <span>{q.section} · {q.topicName || q.topic}</span>
+                {q.practiceTestId && <span style={{ color: C.accentLight }}>Practice #{q.practiceTestId}</span>}
+              </div>
+            </div>
             <DiffBadge level={q.difficulty} />
-            <div style={{ display: "flex", gap: 6, marginLeft: 8 }}><button style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.edit} size={14} color={C.textSec} /></button><button style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.trash} size={14} color={C.danger} /></button></div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => openModal("question", q)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.edit} size={14} color={C.textSec} /></button>
+              <button onClick={() => deleteItem("question", q._id)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.trash} size={14} color={C.danger} /></button>
+            </div>
           </div>
         ))}
       </div>
@@ -456,63 +519,54 @@ export default function SATAdminPanel() {
 
   // ── TESTS ──
   const renderTests = () => (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div style={{ fontSize: 12, color: C.textSec }}>5 шалгалт</div>
-        <Btn primary><Icon d={ic.plus} size={14} color="#fff" /> Шалгалт үүсгэх</Btn>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 400, gap: 16, textAlign: "center" }}>
+      <Icon d={ic.tests} size={48} color={C.textMut} />
+      <div style={{ fontSize: 18, fontWeight: 600, color: C.textSec }}>Practice Test нэмэх</div>
+      <div style={{ fontSize: 13, color: C.textMut, maxWidth: 400, lineHeight: 1.7 }}>
+        "Асуултууд" цэсэнд асуулт нэмж,{" "}
+        <code style={{ background: C.border, padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>practiceTestId</code>{" "}
+        талбарт Practice Test дугаарыг (1, 2, 3...) оруулна уу. Тухайн дугаартай тест автоматаар үүсч, сурагчдад харагдана.
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
-        {[{ n: "Practice Test #1", q: 154, d: "3 цаг", t: 42, a: 1280, s: "active" }, { n: "Practice Test #2", q: 154, d: "3 цаг", t: 38, a: 1310, s: "active" }, { n: "Math Focus", q: 58, d: "1 цаг", t: 65, a: 680, s: "active" }, { n: "Verbal Focus", q: 66, d: "1.5 цаг", t: 51, a: 650, s: "draft" }, { n: "Mini Diagnostic", q: 40, d: "45 мин", t: 89, a: 1250, s: "active" }].map((t, i) => (
-          <div key={i} style={{ background: C.card, borderRadius: 14, padding: 20, border: `1px solid ${C.border}`, transition: "all 0.2s" }} onMouseEnter={e => hoverCard(e, true)} onMouseLeave={e => hoverCard(e, false)}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 12, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>📝</div>
-              <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: t.s === "active" ? C.successBg : C.warningBg, color: t.s === "active" ? C.success : C.warning }}>{t.s === "active" ? "Идэвхтэй" : "Ноорог"}</span>
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>{t.n}</div>
-            <div style={{ display: "flex", gap: 16, fontSize: 12, color: C.textSec, marginBottom: 14 }}><span>{t.q} асуулт</span><span>{t.d}</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
-              <div><div style={{ fontSize: 18, fontWeight: 700 }}>{t.t}</div><div style={{ fontSize: 10, color: C.textMut }}>Бөглөсөн</div></div>
-              <div style={{ textAlign: "right" }}><div style={{ fontSize: 18, fontWeight: 700, color: C.accentLight }}>{t.a}</div><div style={{ fontSize: 10, color: C.textMut }}>Дундаж</div></div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <Btn primary onClick={() => setTab("questions")}><Icon d={ic.plus} size={14} color="#fff" /> Асуулт нэмэх рүү очих</Btn>
     </div>
   );
 
   // ── NEWS ──
-  const fNews = news.filter(n => n.title.toLowerCase().includes(search.toLowerCase()));
+  const fNews = news.filter(n => (n.title || "").toLowerCase().includes(search.toLowerCase()));
   const renderNews = () => (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div style={{ display: "flex", gap: 8 }}>{["Бүгд", "Мэдээ", "Зөвлөгөө", "Амжилт", "Шинэчлэл"].map(f => <button key={f} style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.border}`, cursor: "pointer", background: f === "Бүгд" ? C.accent + "22" : "transparent", color: f === "Бүгд" ? C.accentLight : C.textSec, fontSize: 12, fontWeight: 500 }}>{f}</button>)}</div>
+        <div style={{ fontSize: 12, color: C.textSec }}>{fNews.length} мэдээ</div>
         <Btn primary onClick={() => openModal("news")}><Icon d={ic.plus} size={14} color="#fff" /> Мэдээ нэмэх</Btn>
       </div>
-      {newsLoading && <div style={{ textAlign: "center", color: C.textSec, padding: 40 }}>Уншиж байна...</div>}
+      {loading.news && <div style={{ textAlign: "center", color: C.textSec, padding: 40 }}>Уншиж байна...</div>}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {fNews.map(n => {
           const nId = n._id || n.id;
           const isPublished = n.published || n.status === "published";
           return (
-          <div key={nId} style={{ background: C.card, borderRadius: 14, padding: 20, border: `1px solid ${C.border}`, display: "flex", gap: 20, transition: "all 0.15s" }} onMouseEnter={e => e.currentTarget.style.borderColor = C.accent + "44"} onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                <div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{n.title}</div><div style={{ fontSize: 13, color: C.textSec, lineHeight: 1.5 }}>{n.summary || n.excerpt}</div></div>
-                <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: isPublished ? C.successBg : C.warningBg, color: isPublished ? C.success : C.warning, flexShrink: 0, marginLeft: 12 }}>{isPublished ? "Нийтлэгдсэн" : "Ноорог"}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-                <div style={{ display: "flex", gap: 16, fontSize: 12, color: C.textMut, alignItems: "center" }}>
-                  <span>{n.createdAt ? new Date(n.createdAt).toISOString().slice(0, 10) : n.date}</span>
-                  <span style={{ padding: "2px 8px", borderRadius: 6, background: C.border + "66" }}>{n.category}</span>
-                  {n.pinned && <span style={{ color: C.warning }}>📌 Онцлох</span>}
+            <div key={nId} style={{ background: C.card, borderRadius: 14, padding: 20, border: `1px solid ${C.border}`, display: "flex", gap: 20, transition: "all 0.15s" }} onMouseEnter={e => e.currentTarget.style.borderColor = C.accent + "44"} onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                  <div style={{ flex: 1, paddingRight: 12 }}>
+                    <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{n.title}</div>
+                    <div style={{ fontSize: 13, color: C.textSec, lineHeight: 1.5 }}>{n.summary || n.excerpt}</div>
+                  </div>
+                  <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, flexShrink: 0, background: isPublished ? C.successBg : C.warningBg, color: isPublished ? C.success : C.warning }}>{isPublished ? "Нийтлэгдсэн" : "Ноорог"}</span>
                 </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => openModal("news", { ...n, excerpt: n.summary || n.excerpt, status: isPublished ? "published" : "draft" })} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.edit} size={14} color={C.textSec} /></button>
-                  <button onClick={() => deleteItem("news", nId)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.trash} size={14} color={C.danger} /></button>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+                  <div style={{ display: "flex", gap: 12, fontSize: 12, color: C.textMut, alignItems: "center" }}>
+                    <span>{n.createdAt ? new Date(n.createdAt).toISOString().slice(0, 10) : n.date}</span>
+                    <span style={{ padding: "2px 8px", borderRadius: 6, background: C.border + "66" }}>{n.category}</span>
+                    {n.pinned && <span style={{ color: C.warning }}>📌 Онцлох</span>}
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => openModal("news", n)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.edit} size={14} color={C.textSec} /></button>
+                    <button onClick={() => deleteItem("news", nId)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon d={ic.trash} size={14} color={C.danger} /></button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
           );
         })}
       </div>
@@ -521,7 +575,9 @@ export default function SATAdminPanel() {
 
   const renderPlaceholder = (icon, title, desc) => (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 400, color: C.textMut }}>
-      <Icon d={icon} size={48} color={C.textMut} /><div style={{ fontSize: 18, fontWeight: 600, marginTop: 16, color: C.textSec }}>{title}</div><div style={{ fontSize: 13, marginTop: 6 }}>{desc}</div>
+      <Icon d={icon} size={48} color={C.textMut} />
+      <div style={{ fontSize: 18, fontWeight: 600, marginTop: 16, color: C.textSec }}>{title}</div>
+      <div style={{ fontSize: 13, marginTop: 6 }}>{desc}</div>
     </div>
   );
 
@@ -540,141 +596,136 @@ export default function SATAdminPanel() {
     }
   };
 
+  // ── MODALS ──
   const renderModal = () => {
     if (!modal) return null;
-    if (modal.type === "lesson") return (
-      <Modal open title={modal.editing ? "Хичээл засах" : "Шинэ хичээл нэмэх"} onClose={() => setModal(null)} wide>
-        <InputField label="Хичээлийн нэр" value={form.title} onChange={v => setForm({ ...form, title: v })} placeholder="Жнь: Advanced Algebra" />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <InputField label="Хэсэг" value={form.section} onChange={v => setForm({ ...form, section: v })} select options={["Math", "Verbal"]} />
-          <InputField label="Түвшин" value={form.level} onChange={v => setForm({ ...form, level: v })} select options={["Beginner", "Intermediate", "Advanced"]} />
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <InputField label="Хугацаа" value={form.duration || ""} onChange={v => setForm({ ...form, duration: v })} placeholder="Жнь: 1.5 цаг" />
-          <InputField label="Видео тоо" value={form.videoCount || ""} onChange={v => setForm({ ...form, videoCount: Number(v) })} type="number" />
-        </div>
-        <InputField label="Тайлбар" value={form.desc || ""} onChange={v => setForm({ ...form, desc: v })} textarea placeholder="Хичээлийн товч тайлбар..." />
-        
-        {/* YouTube Unlisted Videos Section */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.textSec, marginBottom: 8 }}>YouTube Unlisted бичлэгүүд</label>
-          <div style={{ background: C.bg, borderRadius: 12, border: `1px solid ${C.border}`, padding: 14, marginBottom: 10 }}>
-            <div style={{ display: "flex", gap: 8 }}>
-              <input value={form.newUrl || ""} onChange={e => setForm({ ...form, newUrl: e.target.value })} placeholder="https://youtu.be/... эсвэл https://youtube.com/watch?v=..." style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
-              <button onClick={() => {
-                if (form.newUrl && form.newUrl.trim()) {
-                  const urls = form.youtubeUrls || [];
-                  setForm({ ...form, youtubeUrls: [...urls, form.newUrl.trim()], newUrl: "", videoCount: urls.length + 1 });
-                }
-              }} style={{ padding: "9px 16px", borderRadius: 8, border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${C.accent}, ${C.accentLight})`, color: "#fff", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>+ Нэмэх</button>
-            </div>
-            <div style={{ fontSize: 11, color: C.textMut, marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ color: C.warning }}>💡</span> YouTube дээр Unlisted горимоор upload хийсэн бичлэгийн линкийг оруулна
-            </div>
+
+    if (modal.type === "video") return (
+      <Modal open title={modal.editing ? "Видео засах" : "Шинэ видео хичээл нэмэх"} onClose={() => setModal(null)} wide>
+        <InputField label="Хичээлийн нэр" value={form.title || ""} onChange={v => setForm({ ...form, title: v })} placeholder="Жнь: Heart of Algebra - Intro" />
+        <InputField label="YouTube URL эсвэл Video ID" value={form.youtubeUrl || ""} onChange={v => setForm({ ...form, youtubeUrl: v })} placeholder="https://youtu.be/xxx эсвэл dQw4w9WgXcQ" />
+        {(getYouTubeId(form.youtubeUrl) || (form.youtubeUrl && form.youtubeUrl.length === 11)) && (
+          <div style={{ marginBottom: 16 }}>
+            <img src={`https://img.youtube.com/vi/${getYouTubeId(form.youtubeUrl) || form.youtubeUrl}/mqdefault.jpg`} alt="" style={{ width: "100%", borderRadius: 10 }} />
           </div>
-          
-          {/* Video list */}
-          {(form.youtubeUrls || []).length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {(form.youtubeUrls || []).map((url, idx) => {
-                const vid = getYouTubeId(url);
-                return (
-                  <div key={idx} style={{ display: "flex", alignItems: "center", gap: 10, background: C.bg, borderRadius: 10, padding: "8px 12px", border: `1px solid ${C.border}` }}>
-                    {vid ? (
-                      <div style={{ width: 80, height: 45, borderRadius: 6, overflow: "hidden", flexShrink: 0, background: "#000", position: "relative" }}>
-                        <img src={`https://img.youtube.com/vi/${vid}/mqdefault.jpg`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <div style={{ width: 24, height: 24, borderRadius: "50%", background: "rgba(255,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <div style={{ width: 0, height: 0, borderTop: "5px solid transparent", borderBottom: "5px solid transparent", borderLeft: "8px solid #fff", marginLeft: 2 }} />
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ width: 80, height: 45, borderRadius: 6, background: C.surface, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <Icon d={ic.video} size={18} color={C.textMut} />
-                      </div>
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 500 }}>Видео #{idx + 1}</div>
-                      <div style={{ fontSize: 11, color: C.textMut, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{url}</div>
-                    </div>
-                    <button onClick={() => {
-                      const urls = [...(form.youtubeUrls || [])];
-                      urls.splice(idx, 1);
-                      setForm({ ...form, youtubeUrls: urls, videoCount: urls.length });
-                    }} style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Icon d={ic.trash} size={13} color={C.danger} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
-          <Btn onClick={() => setModal(null)}>Болих</Btn>
-          <Btn primary onClick={saveModal}>Хадгалах</Btn>
-        </div>
-      </Modal>
-    );
-    if (modal.type === "flashcard") return (
-      <Modal open title={modal.editing ? "Deck засах" : "Шинэ Flashcard Deck"} onClose={() => setModal(null)}>
-        <InputField label="Deck нэр" value={form.deck} onChange={v => setForm({ ...form, deck: v })} placeholder="Жнь: SAT Vocabulary Set 3" />
+        )}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <InputField label="Ангилал" value={form.category} onChange={v => setForm({ ...form, category: v })} select options={["Verbal", "Math", "Strategy"]} />
-          <InputField label="Карт тоо" value={form.cardCount || ""} onChange={v => setForm({ ...form, cardCount: Number(v) })} type="number" />
+          <InputField label="Хэсэг" value={form.section || "math"} onChange={v => setForm({ ...form, section: v })} select options={[{ value: "math", label: "Math" }, { value: "reading-writing", label: "Reading & Writing" }, { value: "general", label: "Ерөнхий" }]} />
+          <InputField label="Түвшин" value={form.difficulty || "beginner"} onChange={v => setForm({ ...form, difficulty: v })} select options={[{ value: "beginner", label: "Beginner" }, { value: "intermediate", label: "Intermediate" }, { value: "advanced", label: "Advanced" }]} />
         </div>
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.textSec, marginBottom: 8 }}>Emoji</label>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {["📚", "📐", "✏️", "📏", "🔤", "💡", "🧠", "🎯", "📊", "🔢"].map(e => (
-              <button key={e} onClick={() => setForm({ ...form, emoji: e })} style={{ width: 40, height: 40, borderRadius: 10, fontSize: 20, cursor: "pointer", border: form.emoji === e ? `2px solid ${C.accent}` : `1px solid ${C.border}`, background: form.emoji === e ? C.accentGlow : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>{e}</button>
-            ))}
-          </div>
+        <InputField label="Сэдэв ID (URL-д харагдах)" value={form.topic || ""} onChange={v => setForm({ ...form, topic: v })} placeholder="Жнь: heart-of-algebra" />
+        <InputField label="Сэдэвийн нэр (харагдах)" value={form.topicName || ""} onChange={v => setForm({ ...form, topicName: v })} placeholder="Жнь: Heart of Algebra" />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <InputField label="Эрэмбэ (дотор эрэмбэ)" value={form.order ?? 0} onChange={v => setForm({ ...form, order: v })} type="number" />
+          <InputField label="Хугацаа (минут)" value={form.duration ?? 0} onChange={v => setForm({ ...form, duration: v })} type="number" />
         </div>
-        <div style={{ background: C.card, borderRadius: 12, padding: 16, border: `1px solid ${C.border}`, marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Картын жишээ</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div style={{ background: C.bg, borderRadius: 10, padding: 14, border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 10, color: C.textMut, marginBottom: 6 }}>НҮҮР ТАЛ</div>
-              <div style={{ fontSize: 13, color: C.text }}>Ubiquitous</div>
-            </div>
-            <div style={{ background: C.bg, borderRadius: 10, padding: 14, border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 10, color: C.textMut, marginBottom: 6 }}>АР ТАЛ</div>
-              <div style={{ fontSize: 13, color: C.text }}>Хаа сайгүй байдаг</div>
-            </div>
-          </div>
+        <InputField label="Тайлбар" value={form.description || ""} onChange={v => setForm({ ...form, description: v })} textarea placeholder="Видеоны товч тайлбар..." />
+        <div style={{ display: "flex", gap: 20, marginBottom: 16 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: C.textSec }}>
+            <input type="checkbox" checked={form.published !== false} onChange={e => setForm({ ...form, published: e.target.checked })} />
+            Нийтлэх
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: C.textSec }}>
+            <input type="checkbox" checked={form.isFree !== false} onChange={e => setForm({ ...form, isFree: e.target.checked })} />
+            Үнэгүй
+          </label>
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <Btn onClick={() => setModal(null)}>Болих</Btn>
-          <Btn primary onClick={saveModal}>Хадгалах</Btn>
+          <Btn primary onClick={saveModal} disabled={saving}>{saving ? "Хадгалж байна..." : "Хадгалах"}</Btn>
         </div>
       </Modal>
     );
+
+    if (modal.type === "question") return (
+      <Modal open title={modal.editing ? "Асуулт засах" : "Шинэ асуулт нэмэх"} onClose={() => setModal(null)} wide>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <InputField label="Хэсэг" value={form.section || "math"} onChange={v => setForm({ ...form, section: v })} select options={[{ value: "math", label: "Math" }, { value: "reading-writing", label: "Reading & Writing" }]} />
+          <InputField label="Бэрхшээл" value={form.difficulty || "medium"} onChange={v => setForm({ ...form, difficulty: v })} select options={[{ value: "easy", label: "Easy" }, { value: "medium", label: "Medium" }, { value: "hard", label: "Hard" }]} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <InputField label="Сэдэв ID" value={form.topic || ""} onChange={v => setForm({ ...form, topic: v })} placeholder="heart-of-algebra" />
+          <InputField label="Сэдэвийн нэр" value={form.topicName || ""} onChange={v => setForm({ ...form, topicName: v })} placeholder="Heart of Algebra" />
+        </div>
+        <InputField label="Practice Test дугаар (сэдэвчилсэн бол хоосон)" value={form.practiceTestId || ""} onChange={v => setForm({ ...form, practiceTestId: v })} type="number" placeholder="1, 2, 3..." />
+        <InputField label="Асуултын текст" value={form.questionText || ""} onChange={v => setForm({ ...form, questionText: v })} textarea placeholder="Асуултаа бичнэ үү..." />
+        <InputField label="Passage (унших хэсэг, заавал биш)" value={form.passage || ""} onChange={v => setForm({ ...form, passage: v })} textarea placeholder="Унших хэсэг байвал бичнэ үү..." />
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.textSec, marginBottom: 8 }}>Хариултын сонголтууд (зөв дээр товшино)</label>
+          {(form.options || [{ label: "A", text: "" }, { label: "B", text: "" }, { label: "C", text: "" }, { label: "D", text: "" }]).map((opt, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "center" }}>
+              <div
+                style={{ width: 32, height: 32, borderRadius: 8, background: form.correctAnswer === opt.label ? C.accentGlow : C.border + "44", border: `2px solid ${form.correctAnswer === opt.label ? C.accent : C.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: form.correctAnswer === opt.label ? C.accentLight : C.textSec, cursor: "pointer", flexShrink: 0, transition: "all 0.15s" }}
+                onClick={() => setForm({ ...form, correctAnswer: opt.label })}
+              >{opt.label}</div>
+              <input
+                value={opt.text}
+                onChange={e => {
+                  const opts = [...(form.options || [])];
+                  opts[i] = { ...opts[i], text: e.target.value };
+                  setForm({ ...form, options: opts });
+                }}
+                placeholder={`${opt.label} сонголт...`}
+                style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: `1px solid ${form.correctAnswer === opt.label ? C.accent : C.border}`, background: C.bg, color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none" }}
+              />
+            </div>
+          ))}
+        </div>
+        <InputField label="Тайлбар (explanation)" value={form.explanation || ""} onChange={v => setForm({ ...form, explanation: v })} textarea placeholder="Зөв хариултын тайлбар..." />
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <Btn onClick={() => setModal(null)}>Болих</Btn>
+          <Btn primary onClick={saveModal} disabled={saving}>{saving ? "Хадгалж байна..." : "Хадгалах"}</Btn>
+        </div>
+      </Modal>
+    );
+
+    if (modal.type === "flashcard") return (
+      <Modal open title="Шинэ карт нэмэх" onClose={() => setModal(null)}>
+        <InputField label="Deck ID (давтан ашиглах боломжтой)" value={form.deckId || ""} onChange={v => setForm({ ...form, deckId: v })} placeholder="sat-vocab-1" />
+        <InputField label="Deck нэр" value={form.deckName || ""} onChange={v => setForm({ ...form, deckName: v })} placeholder="SAT Vocabulary Set 1" />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <InputField label="Хэсэг" value={form.section || "english"} onChange={v => setForm({ ...form, section: v })} select options={[{ value: "english", label: "English" }, { value: "math", label: "Math" }]} />
+          <InputField label="Бэрхшээл" value={form.difficulty || "medium"} onChange={v => setForm({ ...form, difficulty: v })} select options={[{ value: "easy", label: "Easy" }, { value: "medium", label: "Medium" }, { value: "hard", label: "Hard" }]} />
+        </div>
+        <InputField label="Нүүр тал (үг, асуулт)" value={form.front || ""} onChange={v => setForm({ ...form, front: v })} placeholder="Жнь: Ubiquitous" />
+        <InputField label="Ар тал (тайлбар, хариулт)" value={form.back || ""} onChange={v => setForm({ ...form, back: v })} placeholder="Жнь: Хаа сайгүй байдаг" />
+        <InputField label="Жишээ өгүүлбэр (заавал биш)" value={form.example || ""} onChange={v => setForm({ ...form, example: v })} placeholder="Жнь: Technology is ubiquitous in modern life." />
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <Btn onClick={() => setModal(null)}>Болих</Btn>
+          <Btn primary onClick={saveModal} disabled={saving}>{saving ? "Хадгалж байна..." : "Хадгалах"}</Btn>
+        </div>
+      </Modal>
+    );
+
     if (modal.type === "news") return (
       <Modal open title={modal.editing ? "Мэдээ засах" : "Шинэ мэдээ нэмэх"} onClose={() => setModal(null)} wide>
-        <InputField label="Гарчиг" value={form.title} onChange={v => setForm({ ...form, title: v })} placeholder="Мэдээний гарчиг..." />
-        <InputField label="Товч агуулга" value={form.excerpt} onChange={v => setForm({ ...form, excerpt: v })} textarea placeholder="Мэдээний товч тайлбар..." />
+        <InputField label="Гарчиг" value={form.title || ""} onChange={v => setForm({ ...form, title: v })} placeholder="Мэдээний гарчиг..." />
+        <InputField label="Товч агуулга" value={form.excerpt || ""} onChange={v => setForm({ ...form, excerpt: v })} textarea placeholder="Мэдээний товч тайлбар..." />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <InputField label="Ангилал" value={form.category} onChange={v => setForm({ ...form, category: v })} select options={["Мэдээ", "Зөвлөгөө", "Амжилт", "Шинэчлэл"]} />
-          <InputField label="Төлөв" value={form.status} onChange={v => setForm({ ...form, status: v })} select options={["draft", "published"]} />
+          <InputField label="Ангилал" value={form.category || "Мэдээ"} onChange={v => setForm({ ...form, category: v })} select options={["Мэдээ", "Зөвлөгөө", "Амжилт", "Шинэчлэл"]} />
+          <InputField label="Төлөв" value={form.status || "draft"} onChange={v => setForm({ ...form, status: v })} select options={[{ value: "draft", label: "Ноорог" }, { value: "published", label: "Нийтлэх" }]} />
         </div>
-        <div style={{ padding: "16px", borderRadius: 12, border: `2px dashed ${C.border}`, textAlign: "center", marginBottom: 8, cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.borderColor = C.accent + "66"} onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
-          <Icon d={ic.image} size={28} color={C.textMut} />
-          <div style={{ fontSize: 13, color: C.textSec, marginTop: 8 }}>Нүүр зураг оруулах</div>
-          <div style={{ fontSize: 11, color: C.textMut, marginTop: 4 }}>PNG, JPG · 1200x630 санал болгоно</div>
-        </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: C.textSec, marginBottom: 16 }}>
+          <input type="checkbox" checked={form.pinned || false} onChange={e => setForm({ ...form, pinned: e.target.checked })} />
+          Онцлох мэдээ болгох (📌)
+        </label>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <Btn onClick={() => setModal(null)}>Болих</Btn>
-          <Btn primary onClick={saveModal}>{modal.editing ? "Хадгалах" : "Нийтлэх"}</Btn>
+          <Btn primary onClick={saveModal} disabled={saving}>{saving ? "Хадгалж байна..." : modal.editing ? "Хадгалах" : "Нийтлэх"}</Btn>
         </div>
       </Modal>
     );
+
     return null;
   };
 
   return (
     <div style={{ fontFamily: "'DM Sans','Segoe UI',sans-serif", background: C.bg, color: C.text, minHeight: "100vh", display: "flex", overflow: "hidden" }}>
+      {toast && (
+        <div style={{ position: "fixed", top: 20, right: 20, zIndex: 2000, padding: "12px 20px", borderRadius: 12, background: toast.type === "error" ? C.dangerBg : C.successBg, border: `1px solid ${toast.type === "error" ? C.danger : C.success}`, color: toast.type === "error" ? C.danger : C.success, fontSize: 13, fontWeight: 600, boxShadow: "0 8px 32px rgba(0,0,0,0.3)", animation: "modalIn 0.25s ease" }}>
+          {toast.type === "error" ? "❌ " : "✅ "}{toast.msg}
+        </div>
+      )}
       <div style={{ width: sideOpen ? 240 : 68, background: C.surface, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", transition: "width 0.3s cubic-bezier(0.4,0,0.2,1)", flexShrink: 0, overflow: "hidden" }}>
         <div style={{ padding: sideOpen ? "20px 20px 16px" : "20px 12px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", borderBottom: `1px solid ${C.border}` }} onClick={() => setSideOpen(!sideOpen)}>
           <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: `linear-gradient(135deg,${C.accent},${C.accentLight})`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#fff" }}>S</div>
@@ -682,13 +733,7 @@ export default function SATAdminPanel() {
         </div>
         <nav style={{ flex: 1, padding: "12px 8px", overflowY: "auto" }}>
           {navItems.map(item => (
-            <button key={item.id} onClick={() => { setTab(item.id); setSearch(""); }} style={{
-              width: "100%", display: "flex", alignItems: "center", gap: 12,
-              padding: sideOpen ? "10px 12px" : "10px", justifyContent: sideOpen ? "flex-start" : "center",
-              borderRadius: 10, border: "none", cursor: "pointer", marginBottom: 2, fontSize: 13, fontWeight: 500,
-              background: tab === item.id ? C.accentGlow : "transparent",
-              color: tab === item.id ? C.accentLight : C.textSec, transition: "all 0.15s",
-            }} onMouseEnter={e => { if (tab !== item.id) e.currentTarget.style.background = C.surfaceHover; }} onMouseLeave={e => { if (tab !== item.id) e.currentTarget.style.background = "transparent"; }}>
+            <button key={item.id} onClick={() => { setTab(item.id); setSearch(""); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: sideOpen ? "10px 12px" : "10px", justifyContent: sideOpen ? "flex-start" : "center", borderRadius: 10, border: "none", cursor: "pointer", marginBottom: 2, fontSize: 13, fontWeight: 500, background: tab === item.id ? C.accentGlow : "transparent", color: tab === item.id ? C.accentLight : C.textSec, transition: "all 0.15s" }} onMouseEnter={e => { if (tab !== item.id) e.currentTarget.style.background = C.surfaceHover; }} onMouseLeave={e => { if (tab !== item.id) e.currentTarget.style.background = "transparent"; }}>
               <Icon d={item.icon} size={18} color={tab === item.id ? C.accentLight : C.textSec} />
               {sideOpen && <span>{item.label}</span>}
             </button>

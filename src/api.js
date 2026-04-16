@@ -106,30 +106,37 @@ export const authAPI = {
 
 // ─── QUESTIONS API ───
 export const questionsAPI = {
-  // Сэдвүүд авах
   getTopics: async (section) => {
     const query = section ? `?section=${section}` : "";
     return await apiFetch(`/questions/topics${query}`);
   },
-
-  // Сэдвийн асуултууд
   getByTopic: async (topicId, difficulty, limit = 15) => {
     const params = new URLSearchParams({ limit });
     if (difficulty && difficulty !== "all") params.append("difficulty", difficulty);
     return await apiFetch(`/questions/topic/${topicId}?${params}`);
   },
-
-  // Practice test асуултууд
   getPracticeTest: async (testNumber) => {
     return await apiFetch(`/questions/practice-test/${testNumber}`);
   },
-
-  // Хариулт шалгах
   checkAnswer: async (questionId, selectedAnswer) => {
     return await apiFetch("/questions/check", {
       method: "POST",
       body: JSON.stringify({ questionId, selectedAnswer }),
     });
+  },
+  // Admin
+  getAll: async (filters = {}) => {
+    const params = new URLSearchParams(filters);
+    return await apiFetch(`/questions/admin/all?${params}`);
+  },
+  create: async (data) => {
+    return await apiFetch("/questions", { method: "POST", body: JSON.stringify(data) });
+  },
+  update: async (id, data) => {
+    return await apiFetch(`/questions/${id}`, { method: "PUT", body: JSON.stringify(data) });
+  },
+  delete: async (id) => {
+    return await apiFetch(`/questions/${id}`, { method: "DELETE" });
   },
 };
 
@@ -192,22 +199,44 @@ export const progressAPI = {
 
 // ─── FLASHCARDS API ───
 export const flashcardsAPI = {
-  // Deck жагсаалт
   getDecks: async (section, difficulty) => {
     const params = new URLSearchParams();
     if (section) params.append("section", section);
     if (difficulty && difficulty !== "all") params.append("difficulty", difficulty);
     return await apiFetch(`/flashcards/decks?${params}`);
   },
-
-  // Нэг deck-ийн картууд
   getDeck: async (deckId) => {
     return await apiFetch(`/flashcards/deck/${deckId}`);
   },
-
-  // Санамсаргүй карт
   getRandom: async () => {
     return await apiFetch("/flashcards/random");
+  },
+  // Admin
+  createCard: async (data) => {
+    return await apiFetch("/flashcards", { method: "POST", body: JSON.stringify(data) });
+  },
+  deleteDeck: async (deckId) => {
+    return await apiFetch(`/flashcards/deck/${deckId}`, { method: "DELETE" });
+  },
+  deleteCard: async (id) => {
+    return await apiFetch(`/flashcards/${id}`, { method: "DELETE" });
+  },
+};
+
+// ─── VIDEOS API ───
+export const videosAPI = {
+  getAll: async (filters = {}) => {
+    const params = new URLSearchParams(filters);
+    return await apiFetch(`/videos?${params}`);
+  },
+  create: async (data) => {
+    return await apiFetch("/videos", { method: "POST", body: JSON.stringify(data) });
+  },
+  update: async (id, data) => {
+    return await apiFetch(`/videos/${id}`, { method: "PUT", body: JSON.stringify(data) });
+  },
+  delete: async (id) => {
+    return await apiFetch(`/videos/${id}`, { method: "DELETE" });
   },
 };
 
