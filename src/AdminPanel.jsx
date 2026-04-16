@@ -326,6 +326,8 @@ export default function SATAdminPanel() {
     } catch (err) {
       const msg = err.message || "Алдаа гарлаа";
       console.error("❌ saveModal error:", err);
+      // eslint-disable-next-line no-alert
+      window.alert("❌ Алдаа: " + msg);
       setSaveError(msg);
       showToast(msg, "error");
     } finally {
