@@ -1036,41 +1036,72 @@ const TopicTestsPage = ({ onStartTest }) => {
 const FlashcardsPage = () => {
   const [tab, setTab] = useState("english");
   const [diff, setDiff] = useState("All");
+  const [decks, setDecks] = useState([]);
+  const [loadingDecks, setLoadingDecks] = useState(true);
   const [practicing, setPracticing] = useState(false);
+  const [cards, setCards] = useState([]);
+  const [loadingCards, setLoadingCards] = useState(false);
   const [cardIndex, setCardIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const token = localStorage.getItem("sat_token");
 
-  const decks = flashcardDecks[tab];
-  const filtered = diff === "All" ? decks : decks.filter((d) => d.difficulty === diff);
+  useEffect(() => {
+    setLoadingDecks(true);
+    const section = tab === "english" ? "english" : "math";
+    fetch(`${API_URL}/flashcards/decks?section=${section}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(data => { setDecks(data.decks || []); setLoadingDecks(false); })
+      .catch(() => setLoadingDecks(false));
+  }, [tab]);
 
-  if (practicing) {
-    const card = sampleFlashcards[cardIndex];
+  const startPractice = async (deckId) => {
+    setLoadingCards(true);
+    try {
+      const res = await fetch(`${API_URL}/flashcards/deck/${deckId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setCards(data.cards || []);
+      setCardIndex(0);
+      setFlipped(false);
+      setPracticing(true);
+    } catch {}
+    setLoadingCards(false);
+  };
+
+  const filtered = diff === "All" ? decks : decks.filter(d => (d.difficulty || "").toLowerCase() === diff.toLowerCase());
+
+  if (practicing && cards.length > 0) {
+    const card = cards[cardIndex];
     return (
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
-          <button onClick={() => { setPracticing(false); setCardIndex(0); setFlipped(false); }} style={S.btn("outline")}>
+          <button onClick={() => { setPracticing(false); setCardIndex(0); setFlipped(false); setCards([]); }} style={S.btn("outline")}>
             ← Буцах
           </button>
           <span style={{ fontSize: 15, fontWeight: 600, color: T.textSec }}>
-            {cardIndex + 1} / {sampleFlashcards.length}
+            {cardIndex + 1} / {cards.length}
           </span>
         </div>
-        <div style={{ marginBottom: 8 }}><ProgressBar pct={((cardIndex + 1) / sampleFlashcards.length) * 100} color={T.accent} height={4} /></div>
+        <div style={{ marginBottom: 8 }}><ProgressBar pct={((cardIndex + 1) / cards.length) * 100} color={T.accent} height={4} /></div>
         <div style={{ marginTop: 40 }}>
           <div style={S.flashcardOuter} onClick={() => setFlipped(!flipped)}>
             <div style={S.flashcardInner(flipped)}>
               <div style={S.flashcardFace(false)}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: T.primary, marginBottom: 16 }}>TERM</div>
-                <div style={{ fontSize: 42, fontWeight: 700, fontFamily: "'Playfair Display', serif" }}>{card.front}</div>
+                <div style={{ fontSize: 36, fontWeight: 700, fontFamily: "'Playfair Display', serif", textAlign: "center" }}>{card.front}</div>
                 <div style={{ fontSize: 14, color: T.textSec, marginTop: 24 }}>Карт дээр дарж утгыг харах</div>
               </div>
               <div style={S.flashcardFace(true)}>
                 <div style={{ fontSize: 14, fontWeight: 600, opacity: 0.8, marginBottom: 12 }}>DEFINITION</div>
-                <div style={{ fontSize: 26, fontWeight: 600 }}>{card.back}</div>
-                <div style={{
-                  marginTop: 24, padding: "12px 20px", borderRadius: 12,
-                  background: "rgba(255,255,255,0.15)", fontSize: 14, lineHeight: 1.5, fontStyle: "italic",
-                }}>"{card.example}"</div>
+                <div style={{ fontSize: 24, fontWeight: 600, textAlign: "center" }}>{card.back}</div>
+                {card.example && (
+                  <div style={{ marginTop: 24, padding: "12px 20px", borderRadius: 12, background: "rgba(255,255,255,0.15)", fontSize: 14, lineHeight: 1.5, fontStyle: "italic" }}>
+                    "{card.example}"
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1080,11 +1111,9 @@ const FlashcardsPage = () => {
               style={{ ...S.btn("outline"), opacity: cardIndex === 0 ? 0.4 : 1 }}>
               ← Өмнөх
             </button>
-            <button style={{ ...S.btn("accent"), minWidth: 80 }}>Мэднэ ✓</button>
-            <button style={{ ...S.btn(), background: T.danger, minWidth: 80 }}>Мэдэхгүй ✗</button>
-            <button onClick={() => { setFlipped(false); setCardIndex(Math.min(sampleFlashcards.length - 1, cardIndex + 1)); }}
-              disabled={cardIndex === sampleFlashcards.length - 1}
-              style={{ ...S.btn("outline"), opacity: cardIndex === sampleFlashcards.length - 1 ? 0.4 : 1 }}>
+            <button onClick={() => { setFlipped(false); setCardIndex(Math.min(cards.length - 1, cardIndex + 1)); }}
+              disabled={cardIndex === cards.length - 1}
+              style={{ ...S.btn(), opacity: cardIndex === cards.length - 1 ? 0.4 : 1 }}>
               Дараах →
             </button>
           </div>
@@ -1105,37 +1134,50 @@ const FlashcardsPage = () => {
           ))}
         </div>
         <div style={{ display: "flex", gap: 6 }}>
-          {["All", "Easy", "Medium", "Hard"].map((d) => (
-            <button key={d} onClick={() => setDiff(d)} style={{
+          {["All", "easy", "medium", "hard"].map((d) => (
+            <button key={d} onClick={() => setDiff(d === "All" ? "All" : d)} style={{
               padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer",
               background: diff === d ? T.text : T.bg, color: diff === d ? "#fff" : T.textSec,
               fontSize: 13, fontWeight: 600, fontFamily: "inherit",
-            }}>{d === "All" ? "Бүгд" : d}</button>
+            }}>{d === "All" ? "Бүгд" : d.charAt(0).toUpperCase() + d.slice(1)}</button>
           ))}
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
-        {filtered.map((d) => (
-          <div key={d.id} style={S.card}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-              <div style={{ fontSize: 32 }}>{d.emoji}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 16, fontWeight: 600 }}>{d.name}</span>
-                  <span style={S.tag(diffBg(d.difficulty), diffColor(d.difficulty))}>{d.difficulty}</span>
-                </div>
-                <div style={{ fontSize: 13, color: T.textSec, marginTop: 4 }}>
-                  {d.mastered}/{d.cards} цээжилсэн
+      {loadingDecks ? (
+        <div style={{ textAlign: "center", padding: "60px 0", color: T.textSec }}>
+          <div style={{ width: 36, height: 36, border: `3px solid ${T.border}`, borderTopColor: T.primary, borderRadius: "50%", margin: "0 auto 16px", animation: "spin 0.8s linear infinite" }} />
+          Ачааллаж байна...
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "80px 0", color: T.textSec }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
+          <div style={{ fontSize: 16, fontWeight: 600 }}>Flashcard байхгүй байна</div>
+          <div style={{ fontSize: 13, marginTop: 8 }}>Админ панелаас карт нэмнэ үү</div>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+          {filtered.map((d) => (
+            <div key={d._id} style={S.card}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                <div style={{ fontSize: 32 }}>{d.emoji || "📚"}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 16, fontWeight: 600 }}>{d.deckName}</span>
+                    <span style={S.tag(diffBg(d.difficulty), diffColor(d.difficulty))}>{d.difficulty}</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: T.textSec, marginTop: 4 }}>
+                    {d.totalCards} карт
+                  </div>
                 </div>
               </div>
+              <ProgressBar pct={0} color={diffColor(d.difficulty)} />
+              <button onClick={() => startPractice(d._id)} disabled={loadingCards} style={{ ...S.btn(), width: "100%", marginTop: 16, opacity: loadingCards ? 0.6 : 1 }}>
+                {loadingCards ? "Ачааллаж..." : "Дадлага хийх"} <Icon name="arrow" size={16} color="#fff" />
+              </button>
             </div>
-            <ProgressBar pct={(d.mastered / d.cards) * 100} color={diffColor(d.difficulty)} />
-            <button onClick={() => setPracticing(true)} style={{ ...S.btn(), width: "100%", marginTop: 16 }}>
-              Дадлага хийх <Icon name="arrow" size={16} color="#fff" />
-            </button>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -1701,9 +1743,9 @@ const TestRunnerPage = ({ config, onBack }) => {
         const data = await res.json();
         let qs = [];
         if (config.type === "practice") {
-          if (config.section === "math") qs = data.math || [];
-          else if (config.section === "reading-writing") qs = data.readingWriting || [];
-          else qs = [...(data.readingWriting || []), ...(data.math || [])];
+          if (config.section === "math") qs = (data.math?.questions) || data.math || [];
+          else if (config.section === "reading-writing") qs = (data.readingWriting?.questions) || data.readingWriting || [];
+          else qs = [...((data.readingWriting?.questions) || data.readingWriting || []), ...((data.math?.questions) || data.math || [])];
         } else {
           qs = data.questions || [];
         }
