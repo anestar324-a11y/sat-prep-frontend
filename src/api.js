@@ -31,6 +31,15 @@ const apiFetch = async (endpoint, options = {}) => {
       headers,
     });
 
+    // Render free tier returns HTML when sleeping — handle non-JSON gracefully
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      if (!response.ok) {
+        throw new Error(`Сервер унтаж байна уу? (${response.status}). Хэдэн секунд хүлээгээд дахин оролдоно уу.`);
+      }
+      throw new Error(`Буруу хариу: ${response.status}`);
+    }
+
     const data = await response.json();
 
     if (!response.ok) {
@@ -39,6 +48,11 @@ const apiFetch = async (endpoint, options = {}) => {
 
     return data;
   } catch (error) {
+    if (error.name === "TypeError" && error.message === "Failed to fetch") {
+      const friendlyErr = new Error("Сервертэй холбогдож чадсангүй. Интернет эсвэл backend шалгана уу.");
+      console.error(`API алдаа [${endpoint}]:`, error);
+      throw friendlyErr;
+    }
     console.error(`API алдаа [${endpoint}]:`, error);
     throw error;
   }

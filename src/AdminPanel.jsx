@@ -134,18 +134,23 @@ const InputField = ({ label, value, onChange, type = "text", placeholder, textar
   </div>
 );
 
-const Modal = ({ open, onClose, title, children, wide }) => {
+const Modal = ({ open, onClose, title, children, wide, footer }) => {
   if (!open) return null;
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
       <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }} />
-      <div onClick={e => e.stopPropagation()} style={{ position: "relative", background: C.surface, borderRadius: 18, border: `1px solid ${C.border}`, width: wide ? 640 : 480, maxHeight: "85vh", overflow: "auto", animation: "modalIn 0.25s ease" }}>
+      <div onClick={e => e.stopPropagation()} style={{ position: "relative", background: C.surface, borderRadius: 18, border: `1px solid ${C.border}`, width: wide ? 640 : 480, maxHeight: "90vh", display: "flex", flexDirection: "column", animation: "modalIn 0.25s ease" }}>
         <style>{`@keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}`}</style>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
           <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{title}</h3>
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4 }}><Icon d={ic.close} size={18} color={C.textSec} /></button>
         </div>
-        <div style={{ padding: 24 }}>{children}</div>
+        <div style={{ padding: 24, overflowY: "auto", flex: 1 }}>{children}</div>
+        {footer && (
+          <div style={{ padding: "16px 24px", borderTop: `1px solid ${C.border}`, flexShrink: 0, background: C.surface, borderRadius: "0 0 18px 18px" }}>
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -162,6 +167,7 @@ export default function SATAdminPanel() {
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [toast, setToast] = useState(null);
 
   const [videos, setVideos] = useState([]);
@@ -169,8 +175,15 @@ export default function SATAdminPanel() {
   const [flashcardDecks, setFlashcardDecks] = useState([]);
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState({ videos: false, questions: false, flashcards: false, news: false });
+  const [backendStatus, setBackendStatus] = useState("unknown"); // "ok" | "error" | "unknown"
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    // Check backend connectivity on mount
+    fetch("https://sat-prep-backend.onrender.com/api/health")
+      .then(r => r.ok ? setBackendStatus("ok") : setBackendStatus("error"))
+      .catch(() => setBackendStatus("error"));
+  }, []);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -232,10 +245,12 @@ export default function SATAdminPanel() {
       } : { title: "", excerpt: "", category: "Мэдээ", status: "draft", pinned: false });
     }
     setModal({ type, editing: !!data, data });
+    setSaveError(null);
   };
 
   const saveModal = async () => {
     setSaving(true);
+    setSaveError(null);
     try {
       if (modal.type === "video") {
         if (!form.title?.trim()) throw new Error("Хичээлийн нэр оруулна уу");
@@ -309,7 +324,10 @@ export default function SATAdminPanel() {
       }
       setModal(null);
     } catch (err) {
-      showToast(err.message || "Алдаа гарлаа", "error");
+      const msg = err.message || "Алдаа гарлаа";
+      console.error("❌ saveModal error:", err);
+      setSaveError(msg);
+      showToast(msg, "error");
     } finally {
       setSaving(false);
     }
@@ -632,7 +650,17 @@ export default function SATAdminPanel() {
     if (!modal) return null;
 
     if (modal.type === "video") return (
-      <Modal open title={modal.editing ? "Видео засах" : "Шинэ видео хичээл нэмэх"} onClose={() => setModal(null)} wide>
+      <Modal open title={modal.editing ? "Видео засах" : "Шинэ видео хичээл нэмэх"} onClose={() => setModal(null)} wide
+        footer={
+          <div>
+            {saveError && <div style={{ color: "#EF4444", fontSize: 13, marginBottom: 10, padding: "8px 12px", background: "#FEF2F2", borderRadius: 8, border: "1px solid #FCA5A5" }}>{saveError}</div>}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <Btn onClick={() => { setModal(null); setSaveError(null); }}>Болих</Btn>
+              <Btn primary onClick={saveModal} disabled={saving}>{saving ? "Хадгалж байна..." : "Хадгалах"}</Btn>
+            </div>
+          </div>
+        }
+      >
         <InputField label="Хичээлийн нэр" value={form.title || ""} onChange={v => setForm({ ...form, title: v })} placeholder="Жнь: Heart of Algebra - Intro" />
         <InputField label="YouTube URL эсвэл Video ID" value={form.youtubeUrl || ""} onChange={v => setForm({ ...form, youtubeUrl: v })} placeholder="https://youtu.be/xxx эсвэл dQw4w9WgXcQ" />
         {(getYouTubeId(form.youtubeUrl) || (form.youtubeUrl && form.youtubeUrl.length === 11)) && (
@@ -672,7 +700,7 @@ export default function SATAdminPanel() {
             style={{ width: "100%", minHeight: 200, padding: "12px 14px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 13, fontFamily: "inherit", resize: "vertical", outline: "none", lineHeight: 1.7, boxSizing: "border-box" }}
           />
         </div>
-        <div style={{ display: "flex", gap: 20, marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 20, marginBottom: 8 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: C.textSec }}>
             <input type="checkbox" checked={form.published !== false} onChange={e => setForm({ ...form, published: e.target.checked })} />
             Нийтлэх
@@ -682,15 +710,21 @@ export default function SATAdminPanel() {
             Үнэгүй
           </label>
         </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <Btn onClick={() => setModal(null)}>Болих</Btn>
-          <Btn primary onClick={saveModal} disabled={saving}>{saving ? "Хадгалж байна..." : "Хадгалах"}</Btn>
-        </div>
       </Modal>
     );
 
     if (modal.type === "question") return (
-      <Modal open title={modal.editing ? "Асуулт засах" : "Шинэ асуулт нэмэх"} onClose={() => setModal(null)} wide>
+      <Modal open title={modal.editing ? "Асуулт засах" : "Шинэ асуулт нэмэх"} onClose={() => setModal(null)} wide
+        footer={
+          <div>
+            {saveError && <div style={{ color: "#EF4444", fontSize: 13, marginBottom: 10, padding: "8px 12px", background: "#FEF2F2", borderRadius: 8, border: "1px solid #FCA5A5" }}>{saveError}</div>}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <Btn onClick={() => { setModal(null); setSaveError(null); }}>Болих</Btn>
+              <Btn primary onClick={saveModal} disabled={saving}>{saving ? "Хадгалж байна..." : "Хадгалах"}</Btn>
+            </div>
+          </div>
+        }
+      >
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <InputField label="Хэсэг" value={form.section || "math"} onChange={v => setForm({ ...form, section: v })} select options={[{ value: "math", label: "Math" }, { value: "reading-writing", label: "Reading & Writing" }]} />
           <InputField label="Бэрхшээл" value={form.difficulty || "medium"} onChange={v => setForm({ ...form, difficulty: v })} select options={[{ value: "easy", label: "Easy" }, { value: "medium", label: "Medium" }, { value: "hard", label: "Hard" }]} />
@@ -730,15 +764,21 @@ export default function SATAdminPanel() {
           ))}
         </div>
         <InputField label="Тайлбар (explanation)" value={form.explanation || ""} onChange={v => setForm({ ...form, explanation: v })} textarea placeholder="Зөв хариултын тайлбар..." />
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <Btn onClick={() => setModal(null)}>Болих</Btn>
-          <Btn primary onClick={saveModal} disabled={saving}>{saving ? "Хадгалж байна..." : "Хадгалах"}</Btn>
-        </div>
       </Modal>
     );
 
     if (modal.type === "flashcard") return (
-      <Modal open title="Шинэ карт нэмэх" onClose={() => setModal(null)}>
+      <Modal open title="Шинэ карт нэмэх" onClose={() => setModal(null)}
+        footer={
+          <div>
+            {saveError && <div style={{ color: "#EF4444", fontSize: 13, marginBottom: 10, padding: "8px 12px", background: "#FEF2F2", borderRadius: 8, border: "1px solid #FCA5A5" }}>{saveError}</div>}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <Btn onClick={() => { setModal(null); setSaveError(null); }}>Болих</Btn>
+              <Btn primary onClick={saveModal} disabled={saving}>{saving ? "Хадгалж байна..." : "Хадгалах"}</Btn>
+            </div>
+          </div>
+        }
+      >
         <InputField label="Deck ID (давтан ашиглах боломжтой)" value={form.deckId || ""} onChange={v => setForm({ ...form, deckId: v })} placeholder="sat-vocab-1" />
         <InputField label="Deck нэр" value={form.deckName || ""} onChange={v => setForm({ ...form, deckName: v })} placeholder="SAT Vocabulary Set 1" />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -748,29 +788,31 @@ export default function SATAdminPanel() {
         <InputField label="Нүүр тал (үг, асуулт)" value={form.front || ""} onChange={v => setForm({ ...form, front: v })} placeholder="Жнь: Ubiquitous" />
         <InputField label="Ар тал (тайлбар, хариулт)" value={form.back || ""} onChange={v => setForm({ ...form, back: v })} placeholder="Жнь: Хаа сайгүй байдаг" />
         <InputField label="Жишээ өгүүлбэр (заавал биш)" value={form.example || ""} onChange={v => setForm({ ...form, example: v })} placeholder="Жнь: Technology is ubiquitous in modern life." />
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <Btn onClick={() => setModal(null)}>Болих</Btn>
-          <Btn primary onClick={saveModal} disabled={saving}>{saving ? "Хадгалж байна..." : "Хадгалах"}</Btn>
-        </div>
       </Modal>
     );
 
     if (modal.type === "news") return (
-      <Modal open title={modal.editing ? "Мэдээ засах" : "Шинэ мэдээ нэмэх"} onClose={() => setModal(null)} wide>
+      <Modal open title={modal.editing ? "Мэдээ засах" : "Шинэ мэдээ нэмэх"} onClose={() => setModal(null)} wide
+        footer={
+          <div>
+            {saveError && <div style={{ color: "#EF4444", fontSize: 13, marginBottom: 10, padding: "8px 12px", background: "#FEF2F2", borderRadius: 8, border: "1px solid #FCA5A5" }}>{saveError}</div>}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <Btn onClick={() => { setModal(null); setSaveError(null); }}>Болих</Btn>
+              <Btn primary onClick={saveModal} disabled={saving}>{saving ? "Хадгалж байна..." : modal.editing ? "Хадгалах" : "Нийтлэх"}</Btn>
+            </div>
+          </div>
+        }
+      >
         <InputField label="Гарчиг" value={form.title || ""} onChange={v => setForm({ ...form, title: v })} placeholder="Мэдээний гарчиг..." />
         <InputField label="Товч агуулга" value={form.excerpt || ""} onChange={v => setForm({ ...form, excerpt: v })} textarea placeholder="Мэдээний товч тайлбар..." />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <InputField label="Ангилал" value={form.category || "Мэдээ"} onChange={v => setForm({ ...form, category: v })} select options={["Мэдээ", "Зөвлөгөө", "Амжилт", "Шинэчлэл"]} />
           <InputField label="Төлөв" value={form.status || "draft"} onChange={v => setForm({ ...form, status: v })} select options={[{ value: "draft", label: "Ноорог" }, { value: "published", label: "Нийтлэх" }]} />
         </div>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: C.textSec, marginBottom: 16 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: C.textSec, marginBottom: 8 }}>
           <input type="checkbox" checked={form.pinned || false} onChange={e => setForm({ ...form, pinned: e.target.checked })} />
           Онцлох мэдээ болгох (📌)
         </label>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <Btn onClick={() => setModal(null)}>Болих</Btn>
-          <Btn primary onClick={saveModal} disabled={saving}>{saving ? "Хадгалж байна..." : modal.editing ? "Хадгалах" : "Нийтлэх"}</Btn>
-        </div>
       </Modal>
     );
 
@@ -815,6 +857,10 @@ export default function SATAdminPanel() {
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Хайх..." style={{ border: "none", background: "transparent", color: C.text, fontSize: 13, outline: "none", width: "100%", fontFamily: "inherit" }} />
             </div>
             <div style={{ position: "relative", cursor: "pointer" }}><Icon d={ic.bell} size={18} color={C.textSec} /><div style={{ position: "absolute", top: -2, right: -2, width: 8, height: 8, borderRadius: "50%", background: C.danger, border: `2px solid ${C.surface}` }} /></div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: backendStatus === "ok" ? C.success : backendStatus === "error" ? C.danger : C.textMut }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: backendStatus === "ok" ? C.success : backendStatus === "error" ? C.danger : C.textMut }} />
+              {backendStatus === "ok" ? "Backend online" : backendStatus === "error" ? "Backend offline!" : "Checking..."}
+            </div>
           </div>
         </header>
         <main style={{ flex: 1, overflow: "auto", padding: 28, opacity: mounted ? 1 : 0, transition: "opacity 0.5s ease" }}>
