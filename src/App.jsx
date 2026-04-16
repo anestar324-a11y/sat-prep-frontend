@@ -705,8 +705,8 @@ const VideosPage = () => {
             </div>
             <div style={{ fontSize: 12, fontWeight: 700, color: T.primary, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>{activeTopic}</div>
             <h2 style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.3, marginBottom: 10 }}>{selectedVideo.title}</h2>
-            {selectedVideo.description && <p style={{ color: T.textSec, lineHeight: 1.7, marginBottom: 16 }}>{selectedVideo.description}</p>}
-            <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+            {selectedVideo.description && <p style={{ color: T.textSec, lineHeight: 1.7, marginBottom: 12 }}>{selectedVideo.description}</p>}
+            <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 24 }}>
               {watched[selectedVideo._id] ? (
                 <span style={{ display: "flex", alignItems: "center", gap: 6, color: T.success, fontWeight: 600, fontSize: 14 }}>
                   <Icon name="check" size={16} color={T.success} /> Үзсэн
@@ -723,6 +723,63 @@ const VideosPage = () => {
                 </button>
               )}
             </div>
+
+            {/* Lesson objectives */}
+            {selectedVideo.objectives?.length > 0 && (
+              <div style={{ ...S.card, background: T.primaryLight, border: `1px solid ${T.primary}22`, marginBottom: 24 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.primary, marginBottom: 12 }}>Энэ хичээлд:</div>
+                <ul style={{ margin: 0, paddingLeft: 20, display: "flex", flexDirection: "column", gap: 6 }}>
+                  {selectedVideo.objectives.map((obj, i) => (
+                    <li key={i} style={{ fontSize: 14, lineHeight: 1.6, color: T.text }}>{obj}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Lesson text content */}
+            {selectedVideo.lessonText && (
+              <div style={{ ...S.card }}>
+                {selectedVideo.lessonText.split("\n").reduce((blocks, line) => {
+                  const trimmed = line.trimEnd();
+                  if (!trimmed) { blocks.push({ type: "spacer" }); return blocks; }
+                  if (trimmed.startsWith("## ")) { blocks.push({ type: "h2", text: trimmed.slice(3) }); return blocks; }
+                  if (trimmed.startsWith("### ")) { blocks.push({ type: "h3", text: trimmed.slice(4) }); return blocks; }
+                  if (trimmed.startsWith("> ")) { blocks.push({ type: "example", text: trimmed.slice(2) }); return blocks; }
+                  if (trimmed.startsWith("! ")) { blocks.push({ type: "note", text: trimmed.slice(2) }); return blocks; }
+                  if (trimmed.startsWith("- ")) {
+                    if (blocks.length > 0 && blocks[blocks.length - 1].type === "list") {
+                      blocks[blocks.length - 1].items.push(trimmed.slice(2));
+                    } else {
+                      blocks.push({ type: "list", items: [trimmed.slice(2)] });
+                    }
+                    return blocks;
+                  }
+                  blocks.push({ type: "text", text: trimmed });
+                  return blocks;
+                }, []).map((block, i) => {
+                  if (block.type === "spacer") return <div key={i} style={{ height: 8 }} />;
+                  if (block.type === "h2") return <h3 key={i} style={{ fontSize: 18, fontWeight: 700, color: T.text, margin: "16px 0 8px", borderBottom: `2px solid ${T.border}`, paddingBottom: 8 }}>{block.text}</h3>;
+                  if (block.type === "h3") return <h4 key={i} style={{ fontSize: 15, fontWeight: 700, color: T.text, margin: "14px 0 6px" }}>{block.text}</h4>;
+                  if (block.type === "text") return <p key={i} style={{ fontSize: 15, lineHeight: 1.8, color: T.text, margin: "4px 0" }}>{block.text}</p>;
+                  if (block.type === "example") return (
+                    <div key={i} style={{ background: T.primaryLight, borderLeft: `4px solid ${T.primary}`, borderRadius: "0 10px 10px 0", padding: "12px 16px", margin: "10px 0", fontSize: 14, lineHeight: 1.7, color: T.text }}>
+                      <span style={{ fontWeight: 700, color: T.primary, marginRight: 6 }}>Жишээ:</span>{block.text}
+                    </div>
+                  );
+                  if (block.type === "note") return (
+                    <div key={i} style={{ background: T.accentLight, borderLeft: `4px solid ${T.accent}`, borderRadius: "0 10px 10px 0", padding: "12px 16px", margin: "10px 0", fontSize: 14, lineHeight: 1.7, color: T.text }}>
+                      <span style={{ fontWeight: 700, color: "#B8860B", marginRight: 6 }}>📌 Анхаар:</span>{block.text}
+                    </div>
+                  );
+                  if (block.type === "list") return (
+                    <ul key={i} style={{ margin: "8px 0", paddingLeft: 22 }}>
+                      {block.items.map((item, j) => <li key={j} style={{ fontSize: 14, lineHeight: 1.7, color: T.text, marginBottom: 4 }}>{item}</li>)}
+                    </ul>
+                  );
+                  return null;
+                })}
+              </div>
+            )}
           </div>
 
           {/* Sidebar playlist */}

@@ -54,8 +54,21 @@ const testHistory = [
 
 const getYouTubeId = (url) => {
   if (!url) return null;
-  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?\s]{11})/);
-  return m ? m[1] : (url.length === 11 ? url : null);
+  const clean = url.trim();
+  // Direct 11-char ID
+  if (/^[a-zA-Z0-9_-]{11}$/.test(clean)) return clean;
+  // Various YouTube URL formats
+  const patterns = [
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/(?:embed|v|shorts)\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/watch\?(?:.*&)?v=([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const p of patterns) {
+    const m = clean.match(p);
+    if (m) return m[1];
+  }
+  return null;
 };
 
 const MiniChart = ({ data, color, height = 40 }) => {
@@ -195,9 +208,12 @@ export default function SATAdminPanel() {
       setForm(data ? {
         ...data,
         youtubeUrl: data.youtubeId ? `https://youtu.be/${data.youtubeId}` : "",
+        objectivesText: (data.objectives || []).join("\n"),
+        lessonText: data.lessonText || "",
       } : {
         title: "", youtubeUrl: "", section: "math", topic: "", topicName: "",
-        order: 0, duration: 0, difficulty: "beginner", isFree: true, description: "", published: true,
+        order: 0, duration: 0, difficulty: "beginner", isFree: true, description: "",
+        published: true, objectivesText: "", lessonText: "",
       });
     } else if (type === "question") {
       setForm(data ? { ...data } : {
@@ -238,6 +254,8 @@ export default function SATAdminPanel() {
           difficulty: form.difficulty,
           isFree: form.isFree !== false,
           published: form.published !== false,
+          objectives: (form.objectivesText || "").split("\n").map(s => s.trim()).filter(Boolean),
+          lessonText: form.lessonText || "",
         };
         if (modal.editing) {
           const d = await videosAPI.update(modal.data._id, payload);
@@ -632,7 +650,28 @@ export default function SATAdminPanel() {
           <InputField label="Эрэмбэ (дотор эрэмбэ)" value={form.order ?? 0} onChange={v => setForm({ ...form, order: v })} type="number" />
           <InputField label="Хугацаа (минут)" value={form.duration ?? 0} onChange={v => setForm({ ...form, duration: v })} type="number" />
         </div>
-        <InputField label="Тайлбар" value={form.description || ""} onChange={v => setForm({ ...form, description: v })} textarea placeholder="Видеоны товч тайлбар..." />
+        <InputField label="Товч тайлбар" value={form.description || ""} onChange={v => setForm({ ...form, description: v })} textarea placeholder="Видеоны товч тайлбар..." />
+        <InputField
+          label="Суралцах зорилгууд (мөр бүр нэг зорилго)"
+          value={form.objectivesText || ""}
+          onChange={v => setForm({ ...form, objectivesText: v })}
+          textarea
+          placeholder={"Linear equation гэж юу болохыг ойлгох\nSlope ба y-intercept тодорхойлох\nWord problem бодох"}
+        />
+        <div style={{ marginBottom: 4 }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.textSec, marginBottom: 6 }}>
+            Хичээлийн агуулга (текст тайлбар)
+          </label>
+          <div style={{ fontSize: 11, color: C.textMut, marginBottom: 6, lineHeight: 1.6 }}>
+            ## Гарчиг · ### Дэд гарчиг · &gt; Жишээ текст · ! Чухал тэмдэглэл · - жагсаалтын мөр
+          </div>
+          <textarea
+            value={form.lessonText || ""}
+            onChange={e => setForm({ ...form, lessonText: e.target.value })}
+            placeholder={"## Linear relationship гэж юу вэ?\n\nLinear relationship нь хоёр хувьсагчийн хооронд шулуун шугамаар илэрхийлэгдэх хамаарал юм.\n\n### Жишээ\n\n> y = 2x + 3 тэгшитгэл нь linear байна. x утга нэмэгдэхэд y нь 2-оор нэмэгдэнэ.\n\n! Санаж авах: slope нь шулууны налуу, y-intercept нь y тэнхлэгтэй огтлолцох цэг юм."}
+            style={{ width: "100%", minHeight: 200, padding: "12px 14px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 13, fontFamily: "inherit", resize: "vertical", outline: "none", lineHeight: 1.7, boxSizing: "border-box" }}
+          />
+        </div>
         <div style={{ display: "flex", gap: 20, marginBottom: 16 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: C.textSec }}>
             <input type="checkbox" checked={form.published !== false} onChange={e => setForm({ ...form, published: e.target.checked })} />
