@@ -195,7 +195,7 @@ export default function SATAdminPanel() {
     } else if (type === "question") {
       setForm(data ? { ...data } : {
         section: "math", topic: "heart-of-algebra", topicName: "Heart of Algebra",
-        difficulty: "medium", questionText: "", passage: "", explanation: "",
+        difficulty: "medium", questionText: "", imageUrl: "", passage: "", explanation: "",
         correctAnswer: "A", practiceTestId: "",
         options: [{ label: "A", text: "" }, { label: "B", text: "" }, { label: "C", text: "" }, { label: "D", text: "" }],
       });
@@ -241,7 +241,7 @@ export default function SATAdminPanel() {
         const payload = {
           section: form.section, topic: form.topic, topicName: form.topicName,
           difficulty: form.difficulty, questionText: form.questionText,
-          passage: form.passage || null, explanation: form.explanation,
+          imageUrl: form.imageUrl || null, passage: form.passage || null, explanation: form.explanation,
           correctAnswer: form.correctAnswer, options: form.options,
           practiceTestId: form.practiceTestId ? Number(form.practiceTestId) : null,
           emoji: form.emoji || "📝",
@@ -649,6 +649,12 @@ export default function SATAdminPanel() {
         </div>
         <InputField label="Practice Test дугаар (сэдэвчилсэн бол хоосон)" value={form.practiceTestId || ""} onChange={v => setForm({ ...form, practiceTestId: v })} type="number" placeholder="1, 2, 3..." />
         <InputField label="Асуултын текст" value={form.questionText || ""} onChange={v => setForm({ ...form, questionText: v })} textarea placeholder="Асуултаа бичнэ үү..." />
+        <InputField label="Зураг/График URL (заавал биш)" value={form.imageUrl || ""} onChange={v => setForm({ ...form, imageUrl: v })} placeholder="https://... зураг байвал URL-г оруулна уу" />
+        {form.imageUrl && (
+          <div style={{ marginBottom: 12, borderRadius: 10, overflow: "hidden", border: `1px solid ${C.border}` }}>
+            <img src={form.imageUrl} alt="Preview" style={{ width: "100%", maxHeight: 200, objectFit: "contain", background: C.bg }} />
+          </div>
+        )}
         <InputField label="Passage (унших хэсэг, заавал биш)" value={form.passage || ""} onChange={v => setForm({ ...form, passage: v })} textarea placeholder="Унших хэсэг байвал бичнэ үү..." />
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.textSec, marginBottom: 8 }}>Хариултын сонголтууд (зөв дээр товшино)</label>

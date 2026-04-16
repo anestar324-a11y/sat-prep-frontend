@@ -1888,9 +1888,14 @@ const TestRunnerPage = ({ config, onBack }) => {
               {q.passage}
             </div>
           )}
+          {q.imageUrl && (
+            <div style={{ marginBottom: 20, borderRadius: 12, overflow: "hidden", border: `1px solid ${T.border}` }}>
+              <img src={q.imageUrl} alt="Question" style={{ width: "100%", maxHeight: 320, objectFit: "contain", background: T.bg }} />
+            </div>
+          )}
           <div style={{ fontSize: 16, lineHeight: 1.7, marginBottom: 24 }}>{q.questionText}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {q.options.map((opt) => {
+            {(q.options || []).map((opt) => {
               const selected = answers[q._id] === opt.label;
               return (
                 <button key={opt.label} onClick={() => setAnswers(prev => ({ ...prev, [q._id]: opt.label }))}
