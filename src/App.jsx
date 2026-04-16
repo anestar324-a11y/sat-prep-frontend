@@ -1733,10 +1733,7 @@ const TestRunnerPage = ({ config, onBack }) => {
   const [eliminated, setEliminated] = useState({});
   const [elimMode, setElimMode] = useState(false);
   const [showCalc, setShowCalc] = useState(false);
-  const [calcDisplay, setCalcDisplay] = useState("0");
-  const [calcPrev, setCalcPrev] = useState(null);
-  const [calcOp, setCalcOp] = useState(null);
-  const [calcNewNum, setCalcNewNum] = useState(true);
+  const [calcPos, setCalcPos] = useState({ right: 24, bottom: 24 });
   const [highlights, setHighlights] = useState({});
   const [highlightMode, setHighlightMode] = useState(false);
 
@@ -1770,24 +1767,21 @@ const TestRunnerPage = ({ config, onBack }) => {
     return parts.length ? parts : text;
   };
 
-  const calcPress = (key) => {
-    if (key === "C") { setCalcDisplay("0"); setCalcPrev(null); setCalcOp(null); setCalcNewNum(true); return; }
-    if (key === "⌫") { setCalcDisplay(d => d.length > 1 ? d.slice(0, -1) : "0"); return; }
-    if (["+", "−", "×", "÷"].includes(key)) { setCalcPrev(parseFloat(calcDisplay) || 0); setCalcOp(key); setCalcNewNum(true); return; }
-    if (key === "=") {
-      if (calcPrev !== null && calcOp) {
-        const a = calcPrev, b = parseFloat(calcDisplay) || 0;
-        const r = { "+": a + b, "−": a - b, "×": a * b, "÷": b ? a / b : NaN }[calcOp];
-        setCalcDisplay(isNaN(r) ? "Error" : String(+r.toFixed(10)));
-        setCalcPrev(null); setCalcOp(null); setCalcNewNum(true);
-      }
-      return;
-    }
-    if (key === ".") { setCalcDisplay(calcNewNum ? "0." : calcDisplay.includes(".") ? calcDisplay : calcDisplay + "."); setCalcNewNum(false); return; }
-    if (key === "±") { setCalcDisplay(String(-parseFloat(calcDisplay))); return; }
-    if (key === "%") { setCalcDisplay(String(parseFloat(calcDisplay) / 100)); return; }
-    setCalcDisplay(calcNewNum ? key : calcDisplay === "0" ? key : calcDisplay.length < 14 ? calcDisplay + key : calcDisplay);
-    setCalcNewNum(false);
+  const dragCalc = (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startRight = calcPos.right;
+    const startBottom = calcPos.bottom;
+    const onMove = (me) => {
+      setCalcPos({
+        right: Math.max(0, startRight - (me.clientX - startX)),
+        bottom: Math.max(0, startBottom - (me.clientY - startY)),
+      });
+    };
+    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
   };
 
   useEffect(() => {
@@ -2091,29 +2085,22 @@ const TestRunnerPage = ({ config, onBack }) => {
         </div>
       </div>
 
-      {/* Floating Calculator */}
+      {/* Desmos Calculator */}
       {showCalc && (
-        <div style={{ position: "fixed", bottom: 24, right: 24, width: 260, background: "#1C1C1E", borderRadius: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.45)", overflow: "hidden", zIndex: 1000 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px 8px" }}>
-            <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>🧮 Тооны машин</span>
-            <button onClick={() => setShowCalc(false)} style={{ background: "none", border: "none", color: "#8E8E93", cursor: "pointer", fontSize: 20, lineHeight: 1, padding: 0 }}>×</button>
+        <div style={{ position: "fixed", bottom: calcPos.bottom, right: calcPos.right, width: 480, height: 520, background: "#fff", borderRadius: 16, boxShadow: "0 24px 64px rgba(0,0,0,0.35)", overflow: "hidden", zIndex: 1000, display: "flex", flexDirection: "column", border: `1px solid ${T.border}` }}>
+          <div onMouseDown={dragCalc} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: T.card, borderBottom: `1px solid ${T.border}`, cursor: "move", userSelect: "none", flexShrink: 0 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>🧮 Desmos Graphing Calculator</span>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <a href="https://www.desmos.com/calculator" target="_blank" rel="noreferrer" style={{ fontSize: 11, color: T.textSec, textDecoration: "none" }}>↗ Томруулах</a>
+              <button onClick={() => setShowCalc(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: T.textSec, lineHeight: 1, padding: 0 }}>×</button>
+            </div>
           </div>
-          <div style={{ padding: "2px 16px 0", color: "#8E8E93", fontSize: 12, minHeight: 18, textAlign: "right" }}>{calcOp ? `${calcPrev} ${calcOp}` : ""}</div>
-          <div style={{ padding: "4px 16px 12px", textAlign: "right", fontSize: 38, fontWeight: 200, color: "#fff", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{calcDisplay}</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, padding: "0 8px 12px" }}>
-            {[
-              { k: "C", bg: "#636366" }, { k: "±", bg: "#636366" }, { k: "%", bg: "#636366" }, { k: "÷", bg: "#FF9F0A" },
-              { k: "7" }, { k: "8" }, { k: "9" }, { k: "×", bg: "#FF9F0A" },
-              { k: "4" }, { k: "5" }, { k: "6" }, { k: "−", bg: "#FF9F0A" },
-              { k: "1" }, { k: "2" }, { k: "3" }, { k: "+", bg: "#FF9F0A" },
-              { k: "⌫" }, { k: "0" }, { k: "." }, { k: "=", bg: "#FF9F0A" },
-            ].map(({ k, bg }) => (
-              <button key={k} onClick={() => calcPress(k)} style={{ padding: "16px 0", margin: 1, borderRadius: 10, border: "none", cursor: "pointer", fontSize: ["+", "−", "×", "÷", "="].includes(k) ? 20 : 16, fontWeight: 400, background: bg || "#2C2C2E", color: "#fff", fontFamily: "monospace", transition: "opacity 0.1s" }}
-                onMouseDown={e => e.currentTarget.style.opacity = "0.7"}
-                onMouseUp={e => e.currentTarget.style.opacity = "1"}
-              >{k}</button>
-            ))}
-          </div>
+          <iframe
+            src="https://www.desmos.com/calculator"
+            style={{ flex: 1, border: "none", width: "100%" }}
+            title="Desmos Graphing Calculator"
+            allow="fullscreen"
+          />
         </div>
       )}
     </div>

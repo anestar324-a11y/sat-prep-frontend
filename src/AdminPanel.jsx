@@ -164,10 +164,17 @@ export default function SATAdminPanel() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const loadVideos = () => {
+    setLoading(l => ({ ...l, videos: true }));
+    videosAPI.getAll()
+      .then(d => setVideos(d.videos || []))
+      .catch(err => showToast(err.message || "Видео ачааллахад алдаа", "error"))
+      .finally(() => setLoading(l => ({ ...l, videos: false })));
+  };
+
   useEffect(() => {
-    if (tab === "lessons" && videos.length === 0) {
-      setLoading(l => ({ ...l, videos: true }));
-      videosAPI.getAll().then(d => setVideos(d.videos || [])).catch(() => {}).finally(() => setLoading(l => ({ ...l, videos: false })));
+    if (tab === "lessons") {
+      loadVideos();
     }
     if (tab === "questions" && questions.length === 0) {
       setLoading(l => ({ ...l, questions: true }));
@@ -215,7 +222,10 @@ export default function SATAdminPanel() {
     setSaving(true);
     try {
       if (modal.type === "video") {
-        const youtubeId = getYouTubeId(form.youtubeUrl) || form.youtubeUrl;
+        if (!form.title?.trim()) throw new Error("Хичээлийн нэр оруулна уу");
+        if (!form.youtubeUrl?.trim()) throw new Error("YouTube URL оруулна уу");
+        const youtubeId = getYouTubeId(form.youtubeUrl) || (form.youtubeUrl.length === 11 ? form.youtubeUrl : null);
+        if (!youtubeId) throw new Error("YouTube URL буруу байна. youtu.be/... эсвэл 11 тэмдэгт ID оруулна уу");
         const payload = {
           title: form.title,
           description: form.description || "",
@@ -399,7 +409,10 @@ export default function SATAdminPanel() {
   const renderLessons = () => (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div style={{ fontSize: 12, color: C.textSec }}>{fVideos.length} видео хичээл</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ fontSize: 12, color: C.textSec }}>{fVideos.length} видео хичээл</div>
+          <button onClick={loadVideos} disabled={loading.videos} style={{ padding: "4px 10px", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", color: C.textSec, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>{loading.videos ? "..." : "↻ Refresh"}</button>
+        </div>
         <Btn primary onClick={() => openModal("video")}><Icon d={ic.plus} size={14} color="#fff" /> Видео нэмэх</Btn>
       </div>
       {loading.videos && <div style={{ textAlign: "center", color: C.textSec, padding: 40 }}>Уншиж байна...</div>}
