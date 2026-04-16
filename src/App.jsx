@@ -1516,14 +1516,21 @@ const NewsPage = () => {
     tips: { bg: T.accentLight, color: "#B8860B", icon: "bulb" },
     news: { bg: T.primaryLight, color: T.primary, icon: "news" },
     strategy: { bg: T.orangeLight, color: T.orange, icon: "target" },
+    // Монгол ангилалууд
+    "Мэдээ": { bg: T.primaryLight, color: T.primary, icon: "news" },
+    "Зөвлөгөө": { bg: T.accentLight, color: "#B8860B", icon: "bulb" },
+    "Амжилт": { bg: T.successLight, color: T.success, icon: "star" },
+    "Шинэчлэл": { bg: T.orangeLight, color: T.orange, icon: "target" },
   };
+  const defaultCat = { bg: T.primaryLight, color: T.primary, icon: "news" };
+  const getCat = (category) => catColors[category] || defaultCat;
 
   const filtered = filter === "all" ? articles : articles.filter((a) => a.category === filter);
   const pinned = articles.filter((a) => a.pinned);
 
   if (selectedArticle) {
     const a = selectedArticle;
-    const cc = catColors[a.category];
+    const cc = getCat(a.category);
     return (
       <div>
         <button onClick={() => setSelectedArticle(null)} style={{ ...S.btn("outline"), marginBottom: 24 }}>
@@ -1599,7 +1606,7 @@ const NewsPage = () => {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             {pinned.map((a) => {
-              const cc = catColors[a.category];
+              const cc = getCat(a.category);
               return (
                 <div key={a._id || a.id} onClick={() => openArticle(a)} style={{
                   ...S.card, padding: 0, overflow: "hidden", cursor: "pointer",
@@ -1634,7 +1641,7 @@ const NewsPage = () => {
       {/* All articles list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {filtered.map((a) => {
-          const cc = catColors[a.category];
+          const cc = getCat(a.category);
           return (
             <div key={a._id || a.id} onClick={() => openArticle(a)} style={{
               ...S.card, display: "flex", alignItems: "center", gap: 20, cursor: "pointer",
