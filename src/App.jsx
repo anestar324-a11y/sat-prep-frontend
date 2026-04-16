@@ -231,7 +231,7 @@ const S = {
     fontWeight: active ? 600 : 500, fontSize: 15, borderRight: active ? `3px solid ${T.primary}` : "3px solid transparent",
     transition: "all 0.2s ease",
   }),
-  main: { flex: 1, marginLeft: 260, padding: "32px 40px", minWidth: 0, overflow: "hidden" },
+  main: { flex: 1, marginLeft: 260, padding: "32px 40px", minWidth: 0, overflowX: "hidden" },
   topBar: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 },
   greeting: { fontSize: 32, fontWeight: 700, letterSpacing: "-0.5px", lineHeight: 1.2 },
   subGreeting: { color: T.textSec, fontSize: 15, marginTop: 6 },
@@ -2334,7 +2334,7 @@ export default function App() {
         <main style={{
           ...S.main,
           opacity: animating ? 0 : 1,
-          transform: animating ? "translateY(8px)" : "translateY(0)",
+          ...(animating ? { transform: "translateY(8px)" } : {}),
           transition: "opacity 0.2s ease, transform 0.2s ease",
           animation: "fadeIn 0.4s ease",
         }}>
